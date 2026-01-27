@@ -1,0 +1,41 @@
+{
+  "name": "cybersec-training-platform",
+  "version": "1.0.0",
+  "description": "A local web portal for browsing and practicing cybersecurity challenges in containerized environments",
+  "main": "index.js",
+  "scripts": {
+    "setup": "./scripts/setup.sh",
+    "start": "podman-compose up -d",
+    "stop": "podman-compose down",
+    "restart": "npm run stop && npm run start",
+    "status": "podman ps",
+    "logs": "podman logs -f --tail=100",
+    "monitor": "echo 'Grafana: http://localhost:3000' && echo 'Prometheus: http://localhost:9090'",
+    "cleanup": "podman system prune -f --filter 'until=24h'",
+    "verify": "./scripts/verify.sh"
+  },
+  "keywords": [
+    "cybersecurity",
+    "training",
+    "containers",
+    "vulnerabilities",
+    "local",
+    "podman"
+  ],
+  "author": "Local Development",
+  "license": "MIT",
+  "dependencies": {
+    "podman-compose": "^1.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "local"
+  }
+}

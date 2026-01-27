@@ -1,0 +1,68 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Container runtime data
+logs/
+*.log
+
+# Monitoring data
+monitoring/data/
+monitoring/prometheus/data/
+monitoring/grafana/data/
+
+# Temporary container configurations
+tmp/
+.tmp/
+
+# Container state and runtime
+.podman/
+.docker/
+
+# Security profiles and secrets
+secrets/
+*.key
+*.pem
+*.p12
+
+# Challenge state (optional - user choice)
+# challenges/state.json
+# progress.json
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+out/
+
+# Testing
+coverage/
+*.coverage
+.nyc_output
+
+# Linting
+.eslintcache
