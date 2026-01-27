@@ -1,0 +1,151 @@
+# Security Hardening Configuration
+# Enforces container security measures for cybersecurity training platform
+
+# SELinux/AppArmor Configuration
+security_modules:
+  selinux:
+    enabled: auto  # Use system default if available
+    context: "container_t"
+    level: "s0"
+  apparmor:
+    enabled: auto  # Use system default if available
+    profile: "docker-default"
+
+# Namespace Isolation Settings
+namespaces:
+  pid:
+    isolation: true
+    init: true  # Use tini or similar init process
+  network:
+    isolation: true
+    host_access: false
+    custom_networks_only: true
+  ipc:
+    isolation: true
+    host_access: false
+  uts:
+    isolation: true
+    hostname_override: true
+  user:
+    isolation: true
+    rootless_required: true
+    uid_mapping: "1000:1000:1"
+    gid_mapping: "1000:1000:1"
+
+# Resource Limits (Default)
+resources:
+  memory:
+    default_limit: "256m"
+    swap_limit: "512m"
+    oom_kill_disable: false
+  cpu:
+    default_limit: "0.5"
+    shares: 1024
+    period: "100000us"
+    quota: "50000us"
+  pids:
+    default_limit: 128
+    max_limit: 512
+  files:
+    ulimit_nofile: 1024
+    ulimit_nproc: 64
+
+# Network Security Restrictions
+network_security:
+  host_network: false
+  privileged_ports: false
+  ip_forwarding: false
+  bridge_nf_call_iptables: true
+  custom_bridge_subnets:
+    - "172.20.0.0/16"
+    - "172.21.0.0/16"
+    - "172.22.0.0/16"
+  dns_restrictions:
+    allow_external: true
+    custom_servers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+
+# Filesystem Security
+filesystem:
+  read_only_root: true
+  tmpfs_mounts:
+    "/tmp":
+      size: "100m"
+      options: "rw,noexec,nosuid,nodev"
+    "/var/tmp":
+      size: "50m"
+      options: "rw,noexec,nosuid,nodev"
+    "/run":
+      size: "50m"
+      options: "rw,noexec,nosuid,nodev"
+  prohibited_mounts:
+    - "/proc"
+    - "/sys"
+    - "/dev"
+    - "/run/docker.sock"
+    - "/var/run/docker.sock"
+    - "/run/podman/podman.sock"
+  volume_restrictions:
+    host_path_whitelist: []  # No host paths allowed
+    bind_mount_validation: strict
+
+# Capability Management
+capabilities:
+  default_drop_all: true
+  challenge_minimal_set:
+    - "CHOWN"
+    - "DAC_OVERRIDE"
+  monitoring_set:
+    - "NET_BIND_SERVICE"
+  never_allow:
+    - "SYS_ADMIN"
+    - "NET_ADMIN"
+    - "SYS_PTRACE"
+    - "SYS_MODULE"
+    - "SYS_RAWIO"
+    - "SYS_TIME"
+    - "MKNOD"
+
+# Security Options
+security_options:
+  no_new_privileges: true
+  seccomp:
+    default_profile: "default"
+    challenge_profile: "unconfined"  # Required for some exploits
+  apparmor_profile: "docker-default"
+  selinux_label: "container_t"
+
+# Audit and Logging
+audit:
+  log_level: "info"
+  log_driver: "journald"
+  log_options:
+    max_size: "10m"
+    max_file: "3"
+  security_events:
+    capability_changes: true
+    privilege_escalation_attempts: true
+    syscall_violations: true
+    network_policy_violations: true
+
+# Runtime Security Enforcement
+enforcement:
+  strict_mode: true
+  fail_on_violation: true
+  kill_on_policy_violation: true
+  quarantine_malicious_containers: true
+
+# Image Security
+image_security:
+  scan_on_pull: false  # Disabled for offline use
+  allow_unsigned: true  # Required for custom challenge images
+  base_image_restrictions:
+    allowed_registries:
+      - "docker.io"
+      - "registry.hub.docker.com"
+      - "quay.io"
+      - "gcr.io"
+    prohibited_tags:
+      - "latest"  # Encourage specific versions
+  vulnerability_tolerance: "high"  # Challenges may contain intentional vulns
