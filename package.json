@@ -12,7 +12,12 @@
     "logs": "podman logs -f --tail=100",
     "monitor": "echo 'Grafana: http://localhost:3000' && echo 'Prometheus: http://localhost:9090'",
     "cleanup": "podman system prune -f --filter 'until=24h'",
-    "verify": "./scripts/verify.sh"
+    "verify": "./scripts/verify.sh",
+    "monitoring:start": "./scripts/monitoring-setup.sh start",
+    "monitoring:stop": "./scripts/monitoring-setup.sh stop",
+    "monitoring:restart": "./scripts/monitoring-setup.sh restart",
+    "monitoring:status": "./scripts/monitoring-setup.sh status",
+    "monitoring:health": "./scripts/monitoring-health.sh full"
   },
   "keywords": [
     "cybersecurity",
