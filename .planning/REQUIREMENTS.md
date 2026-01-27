@@ -16,8 +16,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CHAL-05**: System supports multi-difficulty categorization (easy/medium/hard)
 - [ ] **CHAL-06**: System tracks challenge completion progress and status
 - [ ] **CHAL-07**: System generates unique flags for each container spawn
-- [ ] **CHAL-08**: Platform operates entirely locally without cloud dependencies
-- [ ] **CHAL-09**: System provides disposable container architecture with clean resets
+- [x] **CHAL-08**: Platform operates entirely locally without cloud dependencies
+- [x] **CHAL-09**: System provides disposable container architecture with clean resets
 
 ### Learning & Discovery
 
@@ -30,12 +30,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure & Security
 
-- [ ] **INFR-01**: System provides secure container isolation environments
-- [ ] **INFR-02**: System manages resources and performs automatic cleanup
-- [ ] **INFR-03**: System includes basic monitoring and logging capabilities
-- [ ] **INFR-04**: Platform supports multi-architecture containers (ARM/x64)
-- [ ] **INFR-05**: System implements advanced security hardening measures
-- [ ] **INFR-06**: Platform includes performance optimization features
+- [x] **INFR-01**: System provides secure container isolation environments
+- [x] **INFR-02**: System manages resources and performs automatic cleanup
+- [x] **INFR-03**: System includes basic monitoring and logging capabilities
+- [x] **INFR-04**: Platform supports multi-architecture containers (ARM/x64)
+- [x] **INFR-05**: System implements advanced security hardening measures
+- [x] **INFR-06**: Platform includes performance optimization features
 
 ### UI/UX Standards
 
