@@ -20,7 +20,8 @@ import { ChallengeTable } from './ChallengeTable';
 import { ChallengeFilters } from './ChallengeFilters';
 import { ChallengeDetailModal } from './ChallengeDetailModal';
 import { useChallenges, useSpawnChallenge, useRunningChallenges } from '@/hooks/useChallenges';
-import { type Challenge, type DiscoveryViewState, type DiscoveryFilters } from '@/lib/types';
+import { useDiscoveryFilters, useViewMode, useModalState } from '@/hooks/useFilters';
+import { type Challenge } from '@/lib/types';
 import { Grid, List, AlertCircle, Loader2 } from 'lucide-react';
 
 interface ChallengeDiscoveryProps {
@@ -33,20 +34,17 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
   const { data: runningChallengesData } = useRunningChallenges();
   const spawnMutation = useSpawnChallenge();
 
-  // View state
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [filters, setFilters] = useState<DiscoveryFilters>({
-    search: '',
-    category: '',
-    difficulty: '',
-    completion_status: '',
-    tags: [],
-    sort_by: 'name',
-    sort_order: 'asc',
-  });
+  // URL state management
+  const {
+    filters,
+    updateFilters,
+    clearFilters,
+    hasActiveFilters,
+  } = useDiscoveryFilters();
 
-  // Selected challenge for detail modal
-  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
+  const { view, toggleView } = useViewMode();
+
+  const { modalId: selectedChallengeId, openModal, closeModal } = useModalState('challenge');
 
   // Get challenges from API response
   const challenges: Challenge[] = useMemo(() => {
@@ -143,12 +141,12 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
 
   // Handle view details
   const handleViewDetails = (challengeId: string) => {
-    setSelectedChallengeId(challengeId);
+    openModal(challengeId);
   };
 
   // Handle modal close
   const handleModalClose = () => {
-    setSelectedChallengeId(null);
+    closeModal();
   };
 
   // Get selected challenge object
@@ -159,26 +157,13 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
   }, [selectedChallengeId, challenges]);
 
   // Handle filter changes
-  const handleFiltersChange = (newFilters: DiscoveryFilters) => {
-    setFilters(newFilters);
+  const handleFiltersChange = async (newFilters: any) => {
+    await updateFilters(newFilters);
   };
 
   // Handle clear filters
-  const handleClearFilters = () => {
-    setFilters({
-      search: '',
-      category: '',
-      difficulty: '',
-      completion_status: '',
-      tags: [],
-      sort_by: 'name',
-      sort_order: 'asc',
-    });
-  };
-
-  // Toggle view mode
-  const toggleViewMode = () => {
-    setViewMode((prev) => prev === 'grid' ? 'table' : 'grid');
+  const handleClearFilters = async () => {
+    await clearFilters();
   };
 
   // Loading state
@@ -234,17 +219,17 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
           {/* View mode toggle */}
           <div className="flex items-center gap-2">
             <Button
-              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              variant={view === 'grid' ? 'default' : 'outline'}
               size="sm"
-              onClick={toggleViewMode}
+              onClick={toggleView}
             >
               <Grid className="h-4 w-4 mr-1" />
               Grid
             </Button>
             <Button
-              variant={viewMode === 'table' ? 'default' : 'outline'}
+              variant={view === 'table' ? 'default' : 'outline'}
               size="sm"
-              onClick={toggleViewMode}
+              onClick={toggleView}
             >
               <List className="h-4 w-4 mr-1" />
               Table
@@ -275,7 +260,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
       </div>
 
       {/* Challenge grid/table */}
-      {viewMode === 'grid' ? (
+      {view === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredChallenges.map((challenge) => (
             <ChallengeCard
