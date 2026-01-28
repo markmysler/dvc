@@ -15,7 +15,7 @@ export interface Challenge {
   difficulty: string;
   points: number;
   tags: string[];
-  container: {
+  container?: {
     image: string;
     ports: Record<string, number>;
     environment?: Record<string, string>;

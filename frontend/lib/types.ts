@@ -18,7 +18,7 @@ export interface Challenge {
   points: number;
   tags: string[];
   estimated_time: number; // minutes
-  container: {
+  container?: {
     image: string;
     ports: Record<string, number>;
     environment?: Record<string, string>;

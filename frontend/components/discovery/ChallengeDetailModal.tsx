@@ -480,30 +480,38 @@ export function ChallengeDetailModal({
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>Image:</span>
-                  <code className="bg-muted px-2 py-1 rounded">{challenge.container.image}</code>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Exposed Ports:</span>
-                  <div className="flex gap-1">
-                    {Object.entries(challenge.container.ports).map(([containerPort, hostPort]) => (
-                      <code key={containerPort} className="bg-muted px-2 py-1 rounded text-xs">
-                        {containerPort}→{hostPort}
-                      </code>
-                    ))}
-                  </div>
-                </div>
-                {challenge.container.environment && Object.keys(challenge.container.environment).length > 0 && (
-                  <div className="flex items-start justify-between">
-                    <span>Environment:</span>
-                    <div className="text-right">
-                      {Object.entries(challenge.container.environment).map(([key, value]) => (
-                        <div key={key} className="text-xs">
-                          <code className="bg-muted px-2 py-1 rounded">{key}={value}</code>
-                        </div>
-                      ))}
+                {challenge.container ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span>Image:</span>
+                      <code className="bg-muted px-2 py-1 rounded">{challenge.container.image}</code>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span>Exposed Ports:</span>
+                      <div className="flex gap-1">
+                        {Object.entries(challenge.container.ports).map(([containerPort, hostPort]) => (
+                          <code key={containerPort} className="bg-muted px-2 py-1 rounded text-xs">
+                            {containerPort}→{hostPort}
+                          </code>
+                        ))}
+                      </div>
+                    </div>
+                    {challenge.container.environment && Object.keys(challenge.container.environment).length > 0 && (
+                      <div className="flex items-start justify-between">
+                        <span>Environment:</span>
+                        <div className="text-right">
+                          {Object.entries(challenge.container.environment).map(([key, value]) => (
+                            <div key={key} className="text-xs">
+                              <code className="bg-muted px-2 py-1 rounded">{key}={value}</code>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center py-4 text-muted-foreground">
+                    <span className="text-sm">Container details will be available when you spawn this challenge</span>
                   </div>
                 )}
               </div>
