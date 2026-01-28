@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
 
 # Challenge flag from environment
-FLAG = os.getenv('FLAG', 'FLAG{xss_vulnerabilities_are_dangerous_83f2a1}')
+FLAG = os.getenv('CHALLENGE_FLAG', os.getenv('FLAG', 'FLAG{xss_vulnerabilities_are_dangerous_83f2a1}'))
 
 # Sample data for the search functionality
 SAMPLE_USERS = [

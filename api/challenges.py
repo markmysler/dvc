@@ -43,8 +43,8 @@ def get_orchestrator() -> ChallengeOrchestrator:
     global _orchestrator_instance
     if _orchestrator_instance is None:
         _orchestrator_instance = ChallengeOrchestrator(
-            challenges_path="../challenges/definitions/challenges.json",
-            security_profiles_path="../security/container-profiles.json"
+            challenges_path="/app/challenges/definitions/challenges.json",
+            security_profiles_path="/app/security/container-profiles.json"
         )
     return _orchestrator_instance
 
@@ -192,7 +192,7 @@ def spawn_challenge():
         orchestrator = get_orchestrator()
 
         logger.info(f"Spawning challenge {challenge_id} for user {user_id}")
-        container_id = orchestrator.spawn_challenge(
+        container_id, instance_data = orchestrator.spawn_challenge(
             challenge_id=challenge_id,
             user_id=user_id,
             session_timeout=session_timeout
@@ -219,15 +219,31 @@ def spawn_challenge():
             user_id=user_id,
             challenge_id=challenge_id,
             container_info=container_info,
-            session_timeout=session_timeout
+            session_timeout=session_timeout,
+            instance_data=instance_data
         )
 
         expires_at = time.time() + session_timeout
+
+        # Construct access URL from ports
+        access_url = None
+        if container_ports:
+            # Try common ports in order of preference
+            for port_key in ['80/tcp', '8080/tcp', '3000/tcp', '5000/tcp']:
+                if port_key in container_ports:
+                    host_port = container_ports[port_key].split(':')[-1]  # Extract port from 'localhost:55522'
+                    access_url = f"http://localhost:{host_port}"
+                    break
+            # If no common port found, use the first available
+            if not access_url and container_ports:
+                first_port = list(container_ports.values())[0].split(':')[-1]
+                access_url = f"http://localhost:{first_port}"
 
         response_data = {
             'status': 'success',
             'session_id': session_id,
             'container_id': container_id,
+            'access_url': access_url,
             'challenge': {
                 'id': challenge_id,
                 'name': challenge_info.get('name', challenge_id),
@@ -422,12 +438,26 @@ def list_running_challenges():
         running_challenges = []
         for container in running_containers:
             # Try to find corresponding session
-            session_data = None
-            if user_id:
-                session_data = session_manager.get_session(
-                    user_id=container['user_id'],
-                    challenge_id=container['challenge_id']
-                )
+            # Always try to find session data using the container's user_id
+            session_data = session_manager.get_session(
+                user_id=container['user_id'],
+                challenge_id=container['challenge_id']
+            )
+
+            # Construct access URL from ports
+            access_url = None
+            ports = container.get('ports', {})
+            if ports:
+                # Try common ports in order of preference
+                for port_key in ['80/tcp', '8080/tcp', '3000/tcp', '5000/tcp']:
+                    if port_key in ports:
+                        host_port = ports[port_key].split(':')[-1]  # Extract port from 'localhost:55522'
+                        access_url = f"http://localhost:{host_port}"
+                        break
+                # If no common port found, use the first available
+                if not access_url and ports:
+                    first_port = list(ports.values())[0].split(':')[-1]
+                    access_url = f"http://localhost:{first_port}"
 
             challenge_info = {
                 'container_id': container['container_id'],
@@ -438,7 +468,8 @@ def list_running_challenges():
                 'user_id': container['user_id'],
                 'started_at': int(container['started_at']) if container['started_at'] else None,
                 'status': container['status'],
-                'ports': container.get('ports', {})
+                'ports': container.get('ports', {}),
+                'access_url': access_url
             }
 
             # Add session info if available

@@ -67,11 +67,31 @@ class ChallengeOrchestrator:
 
         # Initialize Docker client with error handling
         try:
-            self.docker_client = docker.from_env()
+            # Try to connect via Docker socket (for containerized deployment)
+            import os
+            import traceback
+            if os.path.exists('/var/run/docker.sock'):
+                logger.info("Found Docker socket, initializing client...")
+                # Use APIClient for better compatibility with urllib3 < 2.0
+                from docker import APIClient
+                api_client = APIClient(base_url='unix:///var/run/docker.sock')
+                api_client.ping()
+                # Now create the high-level client
+                self.docker_client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
+            else:
+                logger.info("Docker socket not found, using environment...")
+                # Fallback to environment-based connection
+                self.docker_client = docker.from_env()
+
             self.docker_client.ping()
             logger.info("Docker client initialized successfully")
         except DockerException as e:
             logger.error(f"Failed to initialize Docker client: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise ChallengeError(f"Docker connection failed: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error initializing Docker client: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise ChallengeError(f"Docker connection failed: {e}")
 
         # Load configurations
@@ -202,8 +222,11 @@ class ChallengeOrchestrator:
             # Environment variables from challenge
             'environment': container_spec.get('environment', {}),
 
-            # Port mappings from challenge
-            'ports': container_spec.get('ports', {}),
+            # Port mappings from challenge (map to random host ports)
+            'ports': {
+                f"{container_port}/tcp": None  # None means Docker will assign random port
+                for container_port in container_spec.get('ports', {}).keys()
+            },
         }
 
         # Additional ulimits if specified (with higher defaults for challenges)
@@ -230,7 +253,7 @@ class ChallengeOrchestrator:
 
     def _get_flag_secret_key(self) -> str:
         """Get secret key for flag generation from environment or default"""
-        return os.getenv('FLAG_SECRET_KEY', 'default-secret-change-in-production')
+        return os.getenv('FLAG_SECRET_KEY', 'default-secret-key-change-in-production')
 
     def spawn_challenge(self,
                        challenge_id: str,
@@ -322,7 +345,7 @@ class ChallengeOrchestrator:
             }
 
             logger.info(f"Challenge {challenge_id} spawned successfully: {container.id}")
-            return container.id
+            return container.id, instance_data
 
         except ImageNotFound:
             logger.error(f"Challenge image not found: {container_spec['image']}")

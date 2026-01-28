@@ -17,7 +17,7 @@ export interface Challenge {
   difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   points: number;
   tags: string[];
-  estimated_time: number; // minutes
+  estimated_time: number | string; // Can be number (minutes) or string like "15-30 minutes"
   container?: {
     image: string;
     ports: Record<string, number>;
@@ -39,6 +39,7 @@ export interface ChallengeSession {
   created_at: string;
   expires_at: string;
   challenge: Challenge;
+  ports?: Record<string, string>; // Container port mappings e.g., "80/tcp": "localhost:32768"
 }
 
 // User progress and completion tracking

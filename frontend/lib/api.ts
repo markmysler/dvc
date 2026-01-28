@@ -5,36 +5,9 @@
  * All functions include proper error handling and JSON serialization
  */
 
+import { type Challenge, type ChallengeSession } from './types';
+
 // TypeScript interfaces for API responses and requests
-
-export interface Challenge {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  difficulty: string;
-  points: number;
-  tags: string[];
-  container?: {
-    image: string;
-    ports: Record<string, number>;
-    environment?: Record<string, string>;
-  };
-  flag_format?: string;
-  estimated_time?: number;
-}
-
-export interface ChallengeSession {
-  session_id: string;
-  challenge_id: string;
-  user_id: string;
-  container_id: string;
-  access_url: string;
-  status: 'starting' | 'running' | 'stopping' | 'stopped' | 'error';
-  created_at: string;
-  expires_at: string;
-  challenge: Challenge;
-}
 
 export interface SpawnChallengeRequest {
   challenge_id: string;

@@ -50,6 +50,7 @@ class SessionInfo:
     container_port: Optional[str]
     created_at: float  # Unix timestamp
     expires_at: float  # Unix timestamp
+    instance_data: Optional[str] = None  # Unique instance data for flag generation
     status: str = "active"  # active, expired, stopped
 
 
@@ -98,7 +99,8 @@ class SessionManager:
                       user_id: str,
                       challenge_id: str,
                       container_info: Dict[str, Any],
-                      session_timeout: int = DEFAULT_SESSION_TIMEOUT) -> str:
+                      session_timeout: int = DEFAULT_SESSION_TIMEOUT,
+                      instance_data: Optional[str] = None) -> str:
         """
         Create new challenge session with automatic cleanup.
 
@@ -107,6 +109,7 @@ class SessionManager:
             challenge_id: Challenge identifier
             container_info: Container details (id, port, etc.)
             session_timeout: Session lifetime in seconds
+            instance_data: Optional instance-specific data for flag generation
 
         Returns:
             Unique session identifier
@@ -144,6 +147,7 @@ class SessionManager:
                     container_port=container_info.get('container_port'),
                     created_at=current_time,
                     expires_at=current_time + session_timeout,
+                    instance_data=instance_data,
                     status="active"
                 )
 

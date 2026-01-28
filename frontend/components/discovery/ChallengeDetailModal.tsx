@@ -117,7 +117,7 @@ export function ChallengeDetailModal({
 
   // Handle challenge stopping
   const handleStop = async () => {
-    if (!activeSession) return;
+    if (!activeSession?.session_id) return;
     try {
       await stopMutation.mutateAsync(activeSession.session_id);
     } catch (error) {
@@ -127,7 +127,7 @@ export function ChallengeDetailModal({
 
   // Handle flag validation
   const handleValidateFlag = async () => {
-    if (!activeSession || !flagInput.trim()) return;
+    if (!activeSession?.session_id || !flagInput.trim()) return;
 
     try {
       const result = await validateMutation.mutateAsync({
@@ -160,8 +160,13 @@ export function ChallengeDetailModal({
     }
   };
 
-  // Format duration
-  const formatTime = (minutes: number) => {
+  // Format duration - handle both number and string inputs
+  const formatTime = (time: number | string) => {
+    // If it's already a string (like "15-30 minutes"), return as-is
+    if (typeof time === 'string') return time;
+    
+    // If it's a number, format it
+    const minutes = time;
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
@@ -190,7 +195,7 @@ export function ChallengeDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-2">
@@ -234,7 +239,7 @@ export function ChallengeDetailModal({
                   <div className="flex items-center gap-2">
                     {sessionStatus?.icon}
                     <span className="font-medium">{sessionStatus?.text}</span>
-                    <Badge variant="outline">{activeSession.session_id.slice(-8)}</Badge>
+                    <Badge variant="outline">{activeSession.session_id?.slice(-8) || 'Unknown'}</Badge>
                   </div>
 
                   {activeSession.status === 'running' && (
@@ -242,18 +247,18 @@ export function ChallengeDetailModal({
                       <div className="flex items-center gap-2">
                         <span className="text-sm">Access URL:</span>
                         <div className="flex items-center gap-2 p-2 bg-muted rounded">
-                          <code className="text-sm">{activeSession.access_url}</code>
+                          <code className="text-sm">{activeSession.access_url || 'Loading...'}</code>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => navigator.clipboard.writeText(activeSession.access_url)}
+                            onClick={() => activeSession.access_url && navigator.clipboard.writeText(activeSession.access_url)}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => window.open(activeSession.access_url, '_blank')}
+                            onClick={() => activeSession.access_url && window.open(activeSession.access_url, '_blank')}
                           >
                             <ExternalLink className="h-3 w-3" />
                           </Button>
@@ -261,7 +266,7 @@ export function ChallengeDetailModal({
                       </div>
 
                       <p className="text-xs text-muted-foreground">
-                        Expires: {new Date(activeSession.expires_at).toLocaleString()}
+                        Expires: {activeSession.expires_at ? new Date(activeSession.expires_at).toLocaleString() : 'Unknown'}
                       </p>
                     </div>
                   )}
@@ -480,34 +485,39 @@ export function ChallengeDetailModal({
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
-                {challenge.container ? (
+                {activeSession ? (
                   <>
                     <div className="flex items-center justify-between">
-                      <span>Image:</span>
-                      <code className="bg-muted px-2 py-1 rounded">{challenge.container.image}</code>
+                      <span>Container ID:</span>
+                      <code className="bg-muted px-2 py-1 rounded text-xs">{activeSession.container_id.slice(0, 12)}</code>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Exposed Ports:</span>
-                      <div className="flex gap-1">
-                        {Object.entries(challenge.container.ports).map(([containerPort, hostPort]) => (
-                          <code key={containerPort} className="bg-muted px-2 py-1 rounded text-xs">
-                            {containerPort}→{hostPort}
-                          </code>
-                        ))}
-                      </div>
+                      <span>Access URL:</span>
+                      <a 
+                        href={activeSession.access_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline text-xs"
+                      >
+                        {activeSession.access_url}
+                      </a>
                     </div>
-                    {challenge.container.environment && Object.keys(challenge.container.environment).length > 0 && (
-                      <div className="flex items-start justify-between">
-                        <span>Environment:</span>
-                        <div className="text-right">
-                          {Object.entries(challenge.container.environment).map(([key, value]) => (
-                            <div key={key} className="text-xs">
-                              <code className="bg-muted px-2 py-1 rounded">{key}={value}</code>
-                            </div>
+                    {activeSession.ports && Object.keys(activeSession.ports).length > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span>Exposed Ports:</span>
+                        <div className="flex gap-1">
+                          {(Object.entries(activeSession.ports) as [string, string][]).map(([containerPort, hostPort]) => (
+                            <code key={containerPort} className="bg-muted px-2 py-1 rounded text-xs">
+                              {containerPort}→{hostPort}
+                            </code>
                           ))}
                         </div>
                       </div>
                     )}
+                    <div className="flex items-center justify-between">
+                      <span>Session ID:</span>
+                      <code className="bg-muted px-2 py-1 rounded text-xs">{activeSession.session_id}</code>
+                    </div>
                   </>
                 ) : (
                   <div className="flex items-center justify-center py-4 text-muted-foreground">

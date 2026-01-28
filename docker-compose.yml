@@ -1,6 +1,47 @@
 version: '3.8'
 
 services:
+  # Cybersecurity Training Platform API
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: cybersec-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker challenge spawning
+      - ./challenges:/app/challenges:ro
+      - ./security:/app/security:ro
+      - ./engine:/app/engine:ro
+    environment:
+      - FLASK_ENV=development
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    networks:
+      - monitoring
+      - challenges
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - DAC_OVERRIDE  # For Docker socket access
+
+  # Cybersecurity Training Platform Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cybersec-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"  # Use 3001 to avoid conflict with Grafana
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://cybersec-api:5000
+    networks:
+      - monitoring
+    depends_on:
+      - api
   prometheus:
     image: prom/prometheus:v2.50.1
     platform: linux/amd64,linux/arm64
@@ -116,3 +157,10 @@ networks:
       config:
         - subnet: 172.20.0.0/16
           gateway: 172.20.0.1
+  challenges:
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1

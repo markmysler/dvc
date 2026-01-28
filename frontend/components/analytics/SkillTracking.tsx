@@ -245,7 +245,7 @@ export function SkillTracking({ challenges, skillProgress }: SkillTrackingProps)
                               </Badge>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {challenge.points} points • ~{challenge.estimated_time}min
+                              {challenge.points} points • ~{challenge.estimated_time}
                             </div>
                           </div>
                           <Button variant="ghost" size="sm">

@@ -70,8 +70,8 @@ export function ChallengeCard({
       return (
         <div className="flex items-center gap-1 text-sm text-green-600">
           <CheckCircle className="h-3 w-3" />
-          Completed
-          {progress.best_time && (
+          <span>Completed</span>
+          {progress.best_time && progress.best_time > 0 && (
             <span className="text-xs text-muted-foreground">
               ({Math.floor(progress.best_time / 60)}m)
             </span>
@@ -145,7 +145,7 @@ export function ChallengeCard({
 
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            <span>~{challenge.estimated_time}min</span>
+            <span>~{challenge.estimated_time}</span>
           </div>
         </div>
 

@@ -12,7 +12,7 @@
       "container_spec": {
         "image": "sec-prac/web-basic-xss:latest",
         "ports": {
-          "3000": 3000
+          "3000": null
         },
         "environment": {
           "FLAG": "FLAG{xss_vulnerabilities_are_dangerous_83f2a1}",

@@ -13,14 +13,11 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from engine.session_manager import SessionManager
+from engine.session_manager import get_session_manager
 from engine.flag_system import validate_flag
 
 # Create blueprint
 flags_bp = Blueprint('flags', __name__)
-
-# Initialize session manager
-session_manager = SessionManager()
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +64,9 @@ def validate_submitted_flag():
         if not session_id:
             raise BadRequest("Session ID cannot be empty")
 
-        # Get session data
-        session = session_manager.get_session(session_id)
+        # Get session data using singleton session manager
+        session_manager = get_session_manager()
+        session = session_manager.get_session_by_id(session_id)
         if not session:
             raise NotFound("Session not found or expired")
 
