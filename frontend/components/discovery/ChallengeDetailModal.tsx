@@ -32,6 +32,7 @@ import {
   useValidateFlag,
   useRunningChallenges,
 } from '@/hooks/useChallenges';
+import { useProgress } from '@/hooks/useProgress';
 import {
   type Challenge,
   type ChallengeSession,
@@ -74,6 +75,9 @@ export function ChallengeDetailModal({
   const validateMutation = useValidateFlag();
   const { data: runningChallengesData } = useRunningChallenges();
 
+  // Progress tracking
+  const { trackCompletion, startChallenge } = useProgress();
+
   // Local state
   const [flagInput, setFlagInput] = useState('');
   const [showHints, setShowHints] = useState(false);
@@ -99,6 +103,9 @@ export function ChallengeDetailModal({
   // Handle challenge spawning
   const handleSpawn = async () => {
     try {
+      // Track that user started this challenge
+      startChallenge(challenge.id);
+
       await spawnMutation.mutateAsync({
         challenge_id: challenge.id,
         user_id: 'default-user', // TODO: Get from auth context
@@ -128,7 +135,10 @@ export function ChallengeDetailModal({
         flag: flagInput.trim(),
       });
 
-      if (result.valid) {
+      if (result.valid && challenge) {
+        // Track successful completion
+        const timeSpent = result.completion_time || 0;
+        trackCompletion(challenge.id, timeSpent, true);
         setFlagInput('');
       }
     } catch (error) {

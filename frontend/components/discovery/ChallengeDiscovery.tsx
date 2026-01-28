@@ -15,14 +15,17 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChallengeCard } from './ChallengeCard';
 import { ChallengeTable } from './ChallengeTable';
 import { ChallengeFilters } from './ChallengeFilters';
 import { ChallengeDetailModal } from './ChallengeDetailModal';
+import { ProgressDashboard } from '../analytics/ProgressDashboard';
 import { useChallenges, useSpawnChallenge, useRunningChallenges } from '@/hooks/useChallenges';
 import { useDiscoveryFilters, useViewMode, useModalState } from '@/hooks/useFilters';
+import { useProgress } from '@/hooks/useProgress';
 import { type Challenge } from '@/lib/types';
-import { Grid, List, AlertCircle, Loader2 } from 'lucide-react';
+import { Grid, List, AlertCircle, Loader2, BarChart3, Target } from 'lucide-react';
 
 interface ChallengeDiscoveryProps {
   initialData?: any;
@@ -46,6 +49,12 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
 
   const { modalId: selectedChallengeId, openModal, closeModal } = useModalState('challenge');
 
+  // Progress tracking
+  const { progressData, trackCompletion, startChallenge, getChallengeProgress } = useProgress();
+
+  // Active tab state (could also be URL-managed)
+  const [activeTab, setActiveTab] = useState('discovery');
+
   // Get challenges from API response
   const challenges: Challenge[] = useMemo(() => {
     if (challengesData?.challenges) {
@@ -57,7 +66,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
     return [];
   }, [challengesData, initialData]);
 
-  // Filter and search challenges
+  // Filter and search challenges with completion status
   const filteredChallenges = useMemo(() => {
     let filtered = [...challenges];
 
@@ -87,6 +96,23 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
       filtered = filtered.filter((challenge) =>
         filters.tags.some((tag) => challenge.tags.includes(tag))
       );
+    }
+
+    // Completion status filter
+    if (filters.completion_status) {
+      filtered = filtered.filter((challenge) => {
+        const progress = getChallengeProgress(challenge.id);
+        switch (filters.completion_status) {
+          case 'completed':
+            return progress?.completed === true;
+          case 'attempted':
+            return progress && !progress.completed;
+          case 'not-started':
+            return !progress;
+          default:
+            return true;
+        }
+      });
     }
 
     // Sort challenges
@@ -125,11 +151,14 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
     });
 
     return filtered;
-  }, [challenges, filters]);
+  }, [challenges, filters, getChallengeProgress]);
 
   // Handle challenge spawning
   const handleSpawnChallenge = async (challengeId: string) => {
     try {
+      // Track that user started this challenge
+      startChallenge(challengeId);
+
       await spawnMutation.mutateAsync({
         challenge_id: challengeId,
         user_id: 'default-user', // TODO: Get from auth context
@@ -210,93 +239,134 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Challenge Discovery</h1>
+            <h1 className="text-3xl font-bold">Cybersecurity Training Platform</h1>
             <p className="text-muted-foreground">
-              Discover and practice cybersecurity challenges
+              Discover challenges, track progress, and develop cybersecurity skills
             </p>
           </div>
 
-          {/* View mode toggle */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant={view === 'grid' ? 'default' : 'outline'}
-              size="sm"
-              onClick={toggleView}
-            >
-              <Grid className="h-4 w-4 mr-1" />
-              Grid
-            </Button>
-            <Button
-              variant={view === 'table' ? 'default' : 'outline'}
-              size="sm"
-              onClick={toggleView}
-            >
-              <List className="h-4 w-4 mr-1" />
-              Table
-            </Button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <ChallengeFilters
-          challenges={challenges}
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          onClearFilters={handleClearFilters}
-        />
-
-        {/* Results summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {filteredChallenges.length} challenge{filteredChallenges.length !== 1 ? 's' : ''} found
-          </p>
-
-          {runningChallengesData?.running_challenges && runningChallengesData.running_challenges.length > 0 && (
-            <Badge variant="secondary">
-              {runningChallengesData.running_challenges.length} running
-            </Badge>
+          {activeTab === 'discovery' && (
+            /* View mode toggle - only show in discovery tab */
+            <div className="flex items-center gap-2">
+              <Button
+                variant={view === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={toggleView}
+              >
+                <Grid className="h-4 w-4 mr-1" />
+                Grid
+              </Button>
+              <Button
+                variant={view === 'table' ? 'default' : 'outline'}
+                size="sm"
+                onClick={toggleView}
+              >
+                <List className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+            </div>
           )}
         </div>
+
+        {/* Main Navigation Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="discovery" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Discovery
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Progress
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="discovery" className="space-y-4">
+            {/* Discovery Interface */}
+            <div className="space-y-4">
+
+              {/* Filters */}
+              <ChallengeFilters
+                challenges={challenges}
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                onClearFilters={handleClearFilters}
+              />
+
+              {/* Results summary */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {filteredChallenges.length} challenge{filteredChallenges.length !== 1 ? 's' : ''} found
+                </p>
+
+                {runningChallengesData?.running_challenges && runningChallengesData.running_challenges.length > 0 && (
+                  <Badge variant="secondary">
+                    {runningChallengesData.running_challenges.length} running
+                  </Badge>
+                )}
+              </div>
+
+              {/* Challenge grid/table */}
+              {view === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredChallenges.map((challenge) => {
+                    const progress = getChallengeProgress(challenge.id);
+                    return (
+                      <ChallengeCard
+                        key={challenge.id}
+                        challenge={challenge}
+                        progress={progress ? {
+                          user_id: 'default-user',
+                          challenge_id: challenge.id,
+                          status: progress.completed ? 'completed' : 'attempted',
+                          attempts: progress.attempts,
+                          completed_at: progress.completedAt,
+                          best_time: progress.timeSpent,
+                          flags_submitted: progress.attempts,
+                          hints_used: progress.hintsUsed,
+                          points_earned: progress.completed ? challenge.points : 0,
+                        } : undefined}
+                        onSpawn={handleSpawnChallenge}
+                        onViewDetails={handleViewDetails}
+                        isSpawning={spawnMutation.isPending}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <ChallengeTable
+                  challenges={filteredChallenges}
+                  onSpawn={handleSpawnChallenge}
+                  onViewDetails={handleViewDetails}
+                  isSpawning={spawnMutation.isPending}
+                  spawningChallengeId={spawnMutation.variables?.challenge_id}
+                />
+              )}
+
+              {/* Empty state */}
+              {filteredChallenges.length === 0 && (
+                <div className="text-center py-12 space-y-4">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">No challenges found</h3>
+                    <p className="text-muted-foreground">
+                      Try adjusting your search terms or filters to find challenges.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={handleClearFilters}>
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="progress">
+            {/* Progress Analytics Dashboard */}
+            <ProgressDashboard challenges={challenges} />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* Challenge grid/table */}
-      {view === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredChallenges.map((challenge) => (
-            <ChallengeCard
-              key={challenge.id}
-              challenge={challenge}
-              onSpawn={handleSpawnChallenge}
-              onViewDetails={handleViewDetails}
-              isSpawning={spawnMutation.isPending}
-            />
-          ))}
-        </div>
-      ) : (
-        <ChallengeTable
-          challenges={filteredChallenges}
-          onSpawn={handleSpawnChallenge}
-          onViewDetails={handleViewDetails}
-          isSpawning={spawnMutation.isPending}
-          spawningChallengeId={spawnMutation.variables?.challenge_id}
-        />
-      )}
-
-      {/* Empty state */}
-      {filteredChallenges.length === 0 && (
-        <div className="text-center py-12 space-y-4">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">No challenges found</h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search terms or filters to find challenges.
-            </p>
-          </div>
-          <Button variant="outline" onClick={handleClearFilters}>
-            Clear Filters
-          </Button>
-        </div>
-      )}
 
       {/* Challenge detail modal */}
       <ChallengeDetailModal
