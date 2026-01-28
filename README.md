@@ -10,7 +10,7 @@ Users can safely practice real vulnerability exploitation on isolated, disposabl
 
 This platform operates entirely on your local machine without any external dependencies or cloud services:
 
-- **Container Runtime**: Podman for secure, rootless container operations
+- **Container Runtime**: Docker for container operations
 - **Orchestration**: Local docker-compose.yml files for service coordination
 - **Monitoring**: Prometheus + Grafana stack for container and system metrics
 - **Storage**: File-based persistence using local JSON and SQLite
@@ -24,7 +24,7 @@ All challenge containers are ephemeral and automatically cleaned up after use. N
    ```bash
    npm run setup
    ```
-   This installs Podman, sets up monitoring infrastructure, and verifies multi-architecture support.
+   This sets up monitoring infrastructure and verifies multi-architecture support.
 
 2. **Start the platform:**
    ```bash
@@ -48,10 +48,10 @@ All challenge containers are ephemeral and automatically cleaned up after use. N
 
 ```
 Local Machine
-├── Podman (Container Runtime)
+├── Docker (Container Runtime)
 │   ├── Challenge Containers (ephemeral)
 │   ├── Monitoring Stack (persistent)
-│   └── Network Isolation (rootless)
+│   └── Network Isolation
 ├── Monitoring
 │   ├── Prometheus (metrics collection)
 │   └── Grafana (visualization)
@@ -79,8 +79,7 @@ Local Machine
 - **Operating System**: Linux (Ubuntu, Fedora, RHEL, Debian)
 - **Architecture**: x64 or ARM64
 - **Disk Space**: 2GB minimum for container images and monitoring data
-
-The setup script will automatically install Podman if not present on supported systems.
+- **Docker**: Docker Engine must be installed and running
 
 ## Development
 

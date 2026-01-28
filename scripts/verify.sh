@@ -184,8 +184,7 @@ test_multiarch_support() {
 
     # Test manifest creation
     local test_manifest="test-verify-$$"
-    if podman manifest create "$test_manifest" >/dev/null 2>&1; then
-        podman manifest rm "$test_manifest" >/dev/null 2>&1 || true
+    if docker buildx create --use >/dev/null 2>&1 || docker buildx use default >/dev/null 2>&1; then
         pass_test "Multi-architecture manifest creation works"
     else
         fail_test "Cannot create multi-architecture manifests"
@@ -209,8 +208,8 @@ FROM alpine:latest
 RUN echo "Multi-arch test"
 EOF
 
-    if podman build --platform="linux/$alt_arch" --tag "test:$alt_arch" "$test_dir" >/dev/null 2>&1; then
-        podman rmi "test:$alt_arch" >/dev/null 2>&1 || true
+    if docker buildx build --platform="linux/$alt_arch" --tag "test:$alt_arch" "$test_dir" >/dev/null 2>&1; then
+        docker rmi "test:$alt_arch" >/dev/null 2>&1 || true
         pass_test "Cross-architecture build test passed ($host_arch -> $alt_arch)"
     else
         log_warning "Cross-architecture build test failed"
@@ -228,12 +227,12 @@ test_network_isolation() {
     local test_container="network-test-$$"
     local network_test_result=0
 
-    if podman run --rm --name "$test_container" --network none alpine:latest echo "isolated" >/dev/null 2>&1; then
+    if docker run --rm --name "$test_container" --network none alpine:latest echo "isolated" >/dev/null 2>&1; then
         pass_test "Container network isolation works"
     else
         # Try to pull alpine image first
-        if podman pull alpine:latest >/dev/null 2>&1; then
-            if podman run --rm --name "$test_container" --network none alpine:latest echo "isolated" >/dev/null 2>&1; then
+        if docker pull alpine:latest >/dev/null 2>&1; then
+            if docker run --rm --name "$test_container" --network none alpine:latest echo "isolated" >/dev/null 2>&1; then
                 pass_test "Container network isolation works (after image pull)"
             else
                 fail_test "Container network isolation test failed"
@@ -247,8 +246,8 @@ test_network_isolation() {
 
     # Test bridge network creation
     local test_network="test-net-$$"
-    if podman network create "$test_network" >/dev/null 2>&1; then
-        podman network rm "$test_network" >/dev/null 2>&1 || true
+    if docker network create "$test_network" >/dev/null 2>&1; then
+        docker network rm "$test_network" >/dev/null 2>&1 || true
         pass_test "Custom bridge networks can be created"
     else
         fail_test "Cannot create custom bridge networks"
@@ -266,15 +265,15 @@ test_container_security() {
     local test_container="security-test-$$"
 
     # First ensure we have a test image
-    if ! podman image exists alpine:latest; then
-        if ! podman pull alpine:latest >/dev/null 2>&1; then
+    if ! docker image inspect alpine:latest >/dev/null 2>&1; then
+        if ! docker pull alpine:latest >/dev/null 2>&1; then
             skip_test "Cannot pull test image for security tests"
             return 0
         fi
     fi
 
     # Test running with dropped capabilities
-    if podman run --rm \
+    if docker run --rm \
         --name "$test_container" \
         --security-opt no-new-privileges \
         --cap-drop ALL \
@@ -288,7 +287,7 @@ test_container_security() {
     fi
 
     # Test read-only filesystem
-    if podman run --rm \
+    if docker run --rm \
         --name "$test_container-ro" \
         --read-only \
         --tmpfs /tmp:rw,noexec,nosuid,size=10m \
@@ -301,7 +300,7 @@ test_container_security() {
     fi
 
     # Test user namespace isolation
-    if podman run --rm \
+    if docker run --rm \
         --name "$test_container-user" \
         --user 1000:1000 \
         alpine:latest \
@@ -317,7 +316,7 @@ test_container_security() {
 test_filesystem_isolation() {
     start_test "Container filesystem isolation"
 
-    if ! podman image exists alpine:latest; then
+    if ! docker image inspect alpine:latest >/dev/null 2>&1; then
         skip_test "No test image available for filesystem isolation tests"
         return 0
     fi
@@ -328,7 +327,7 @@ test_filesystem_isolation() {
     local test_result=0
 
     # Test restricted filesystem access
-    if podman run --rm \
+    if docker run --rm \
         --name "$test_container" \
         --security-opt no-new-privileges \
         --cap-drop ALL \
@@ -340,7 +339,7 @@ test_filesystem_isolation() {
     fi
 
     # Test that container cannot escape to host root
-    if ! podman run --rm \
+    if ! docker run --rm \
         --name "$test_container-escape" \
         --security-opt no-new-privileges \
         --cap-drop ALL \
@@ -357,7 +356,7 @@ test_filesystem_isolation() {
     mkdir -p "$test_dir"
     echo "test content" > "$test_dir/testfile"
 
-    if podman run --rm \
+    if docker run --rm \
         --name "$test_container-volume" \
         --security-opt no-new-privileges \
         --cap-drop ALL \
@@ -378,7 +377,7 @@ test_filesystem_isolation() {
 test_resource_management() {
     start_test "Container resource management"
 
-    if ! podman image exists alpine:latest; then
+    if ! docker image inspect alpine:latest >/dev/null 2>&1; then
         skip_test "No test image available for resource management tests"
         return 0
     fi
@@ -386,7 +385,7 @@ test_resource_management() {
     local test_container="resource-test-$$"
 
     # Test memory limits
-    if podman run --rm \
+    if docker run --rm \
         --name "$test_container" \
         --memory 64m \
         alpine:latest \
@@ -398,7 +397,7 @@ test_resource_management() {
     fi
 
     # Test CPU limits
-    if podman run --rm \
+    if docker run --rm \
         --name "$test_container-cpu" \
         --cpus 0.5 \
         alpine:latest \
@@ -411,13 +410,13 @@ test_resource_management() {
 
     # Test automatic cleanup verification
     local container_count_before
-    container_count_before=$(podman ps -a --format "{{.Names}}" | wc -l)
+    container_count_before=$(docker ps -a --format "{{.Names}}" | wc -l)
 
     # Run and immediately remove container
-    podman run --rm alpine:latest echo "cleanup test" >/dev/null 2>&1 || true
+    docker run --rm alpine:latest echo "cleanup test" >/dev/null 2>&1 || true
 
     local container_count_after
-    container_count_after=$(podman ps -a --format "{{.Names}}" | wc -l)
+    container_count_after=$(docker ps -a --format "{{.Names}}" | wc -l)
 
     if [[ $container_count_after -eq $container_count_before ]]; then
         pass_test "Automatic container cleanup (--rm) works"
@@ -466,8 +465,8 @@ test_data_persistence() {
 
     # Test volume creation capability
     local test_volume="persistence-test-$$"
-    if podman volume create "$test_volume" >/dev/null 2>&1; then
-        podman volume rm "$test_volume" >/dev/null 2>&1 || true
+    if docker volume create "$test_volume" >/dev/null 2>&1; then
+        docker volume rm "$test_volume" >/dev/null 2>&1 || true
         pass_test "Volume creation and removal works"
     else
         fail_test "Cannot create volumes for data persistence"

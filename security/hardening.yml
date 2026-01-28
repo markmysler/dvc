@@ -85,7 +85,6 @@ filesystem:
     - "/dev"
     - "/run/docker.sock"
     - "/var/run/docker.sock"
-    - "/run/podman/podman.sock"
   volume_restrictions:
     host_path_whitelist: []  # No host paths allowed
     bind_mount_validation: strict

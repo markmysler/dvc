@@ -63,7 +63,6 @@ npm install -D @types/node typescript eslint prettier
 | Database | SQLite | PostgreSQL | Requires server setup, violates local-only constraint |
 | Database | SQLite | MongoDB | Document DB unnecessary, requires server |
 | Frontend | Next.js | Express + React SPA | More complex setup, worse SEO, separate build processes |
-| Containerization | Docker | Podman | Less Docker Hub compatibility, smaller ecosystem |
 | Reverse Proxy | Traefik | Nginx | Requires manual configuration, less container-native |
 
 ## What NOT to Use

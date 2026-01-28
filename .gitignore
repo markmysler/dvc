@@ -25,7 +25,6 @@ tmp/
 .tmp/
 
 # Container state and runtime
-.podman/
 .docker/
 
 # Security profiles and secrets

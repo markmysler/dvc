@@ -55,7 +55,7 @@
 | Monitoring-first approach | Early operational visibility during development | 01-01 | Implemented |
 | JSON security profiles | Easy runtime integration with container commands | 01-02 | Implemented |
 | Systemd cleanup automation | Better logging and lifecycle management than cron | 01-02 | Implemented |
-| Multi-runtime security | Podman preferred, Docker fallback for compatibility | 01-02 | Implemented |
+| Docker-security-hardening | Container security with dropped capabilities and isolation | 01-02 | Implemented |
 | Monitoring-local-only | All monitoring operates locally without external dependencies | 01-03 | Implemented |
 | Prometheus-30day-retention | Configure 30-day local data retention for monitoring metrics | 01-03 | Implemented |
 | Docker-monitoring-deployment | Deploy monitoring stack via Docker containers with security hardening | 01-03 | Implemented |
@@ -79,7 +79,7 @@
 | Global-Python-dependencies | Global installation of Flask dependencies due to system restrictions | 03-04 | Implemented |
 
 ### Active TODOs
-- [x] Complete Phase 1 Plan 01: Project structure and Podman runtime
+- [x] Complete Phase 1 Plan 01: Project structure and Docker runtime
 - [x] Execute Phase 1 Plan 02: Security hardening and automated resource cleanup
 - [x] Execute Phase 1 Plan 03: Monitoring and performance optimization infrastructure
 - [x] Execute Phase 2 Plan 01: Challenge definition system and container orchestration
