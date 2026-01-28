@@ -22,7 +22,15 @@
     "challenge:build": "./scripts/challenge-setup.sh build",
     "challenge:validate": "./scripts/challenge-setup.sh validate",
     "challenge:test": "./scripts/challenge-setup.sh test",
-    "challenge:security-test": "./scripts/security-test.sh"
+    "challenge:security-test": "./scripts/security-test.sh",
+    "api:start": "./scripts/api-server.sh start",
+    "api:stop": "./scripts/api-server.sh stop",
+    "api:restart": "./scripts/api-server.sh restart",
+    "api:status": "./scripts/api-server.sh status",
+    "api:logs": "./scripts/api-server.sh logs",
+    "api:dev": "FLASK_ENV=development ./scripts/api-server.sh start",
+    "api:test": "curl -X GET http://localhost:5000/api/challenges",
+    "api:install": "./scripts/api-server.sh install"
   },
   "keywords": [
     "cybersecurity",
