@@ -17,7 +17,12 @@
     "monitoring:stop": "./scripts/monitoring-setup.sh stop",
     "monitoring:restart": "./scripts/monitoring-setup.sh restart",
     "monitoring:status": "./scripts/monitoring-setup.sh status",
-    "monitoring:health": "./scripts/monitoring-health.sh full"
+    "monitoring:health": "./scripts/monitoring-health.sh full",
+    "challenge:setup": "./scripts/challenge-setup.sh",
+    "challenge:build": "./scripts/challenge-setup.sh build",
+    "challenge:validate": "./scripts/challenge-setup.sh validate",
+    "challenge:test": "./scripts/challenge-setup.sh test",
+    "challenge:security-test": "./scripts/security-test.sh"
   },
   "keywords": [
     "cybersecurity",

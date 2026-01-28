@@ -103,6 +103,55 @@ npm run stop
 npm run restart
 ```
 
+## Challenge Management
+
+The challenge engine provides secure container orchestration for spawning and managing cybersecurity practice environments.
+
+### Setup Challenge Engine
+
+```bash
+# Complete setup with dependency installation
+./scripts/challenge-setup.sh
+
+# Test orchestrator functionality only
+./scripts/challenge-setup.sh test
+
+# Build challenge images only
+./scripts/challenge-setup.sh build
+
+# Validate configuration only
+./scripts/challenge-setup.sh validate
+```
+
+### Challenge Operations
+
+```bash
+# List available challenges
+python3 -m engine.orchestrator list-challenges
+
+# Spawn a challenge for practice
+python3 -m engine.orchestrator spawn <challenge-id> <user-id>
+
+# List currently running challenges
+python3 -m engine.orchestrator list-running
+
+# Clean up expired challenge containers
+python3 -m engine.orchestrator cleanup
+```
+
+### Challenge Development
+
+```bash
+# Build all challenge images
+npm run challenge:build
+
+# Validate challenge definitions
+npm run challenge:validate
+
+# Test challenge container security
+npm run challenge:security-test
+```
+
 ## Security Note
 
 This platform is designed for educational cybersecurity practice. All vulnerabilities are contained within disposable containers that cannot access your host system. However, always review challenge descriptions and ensure you understand what you're running.
