@@ -43,7 +43,7 @@ blue() { echo -e "\033[34m$*\033[0m"; }
 check_privileges() {
     if [[ $EUID -eq 0 ]]; then
         log_warn "Running as root is not recommended for container operations"
-        log_warn "Consider using rootless container runtime (Podman preferred)"
+        log_warn "Consider running Docker in rootless mode"
     fi
 }
 
@@ -51,12 +51,8 @@ check_privileges() {
 check_container_runtime() {
     log_info "Checking container runtime availability..."
 
-    # Check for Podman (preferred)
-    if command -v podman >/dev/null 2>&1; then
-        CONTAINER_RUNTIME="podman"
-        log_info "Found Podman: $(podman --version)"
-    # Check for Docker (fallback)
-    elif command -v docker >/dev/null 2>&1; then
+    # Check for Docker
+    if command -v docker >/dev/null 2>&1; then
         CONTAINER_RUNTIME="docker"
         log_info "Found Docker: $(docker --version)"
 
@@ -66,8 +62,8 @@ check_container_runtime() {
             exit 1
         fi
     else
-        log_error "No container runtime found. Please install Podman or Docker."
-        log_info "Recommended: Install Podman for rootless operation"
+        log_error "Docker not found. Please install Docker."
+        log_info "Install Docker: https://docs.docker.com/get-docker/"
         exit 1
     fi
 
@@ -243,8 +239,8 @@ generate_summary() {
     echo "  python3 -m engine.orchestrator cleanup            # Clean up expired challenges"
     echo ""
     echo "$(blue "Integration:")"
-    echo "  ./scripts/monitoring-start.sh                     # Start monitoring stack"
-    echo "  docker/podman ps --filter label=sec-prac.challenge.id  # View challenge containers"
+    echo "  docker compose up -d                          # Start all services"
+    echo "  docker ps --filter label=sec-prac.challenge.id  # View challenge containers"
     echo ""
 }
 

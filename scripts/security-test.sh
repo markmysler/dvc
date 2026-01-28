@@ -4,13 +4,12 @@
 # Validates container security measures for cybersecurity training platform
 #
 
-set -euo pipefail
+set -uo pipefail
 
 # Configuration
 TEST_IMAGE="alpine:latest"
 TEST_CONTAINER_NAME="security-test-$$"
 SECURITY_PROFILE="/home/mark/sec-prac/security/container-profiles.json"
-PODMAN_CONFIG="/home/mark/sec-prac/configs/podman-security.conf"
 
 # Colors for output
 RED='\033[0;31m'
@@ -50,14 +49,12 @@ log_info() {
 
 # Check if container runtime is available
 check_runtime() {
-    if command -v podman >/dev/null 2>&1; then
-        CONTAINER_CMD="podman"
-        log_info "Using container runtime: Podman"
-    elif command -v docker >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1; then
         CONTAINER_CMD="docker"
-        log_info "Using container runtime: Docker (Podman preferred for security)"
+        log_info "Using container runtime: Docker"
     else
-        echo -e "${RED}Error:${NC} Neither podman nor docker found. Cannot run security tests."
+        echo -e "${RED}Error:${NC} Docker not found. Cannot run security tests."
+        log_info "Install Docker: https://docs.docker.com/get-docker/"
         exit 1
     fi
 }
@@ -73,7 +70,7 @@ cleanup() {
 # Ensure test image is available
 prepare_test_image() {
     log_info "Ensuring test image is available..."
-    if ! $CONTAINER_CMD image exists "$TEST_IMAGE" 2>/dev/null; then
+    if ! $CONTAINER_CMD images -q "$TEST_IMAGE" 2>/dev/null | grep -q .; then
         log_info "Pulling test image: $TEST_IMAGE"
         $CONTAINER_CMD pull "$TEST_IMAGE" >/dev/null 2>&1 || {
             log_warn "Could not pull $TEST_IMAGE - using existing images for tests"
@@ -103,28 +100,15 @@ test_capabilities() {
     ((TESTS_TOTAL++))
     log_test "Capability Restriction"
 
-    if [[ "$CONTAINER_CMD" == "podman" ]]; then
-        # Test with capability drop
-        local cap_test
-        cap_test=$($CONTAINER_CMD run --rm --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
-                   "$TEST_IMAGE" sh -c 'echo "Capability test passed"' 2>/dev/null || echo "failed")
+    # Test with capability drop
+    local cap_test
+    cap_test=$($CONTAINER_CMD run --rm --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
+               "$TEST_IMAGE" sh -c 'echo "Capability test passed"' 2>/dev/null || echo "failed")
 
-        if [[ "$cap_test" == "Capability test passed" ]]; then
-            log_pass "Minimal capabilities (CHOWN, DAC_OVERRIDE) work correctly"
-        else
-            log_fail "Minimal capability set test failed"
-        fi
+    if [[ "$cap_test" == "Capability test passed" ]]; then
+        log_pass "Minimal capabilities (CHOWN, DAC_OVERRIDE) work correctly"
     else
-        # Docker capability test
-        local cap_test
-        cap_test=$($CONTAINER_CMD run --rm --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
-                   "$TEST_IMAGE" sh -c 'echo "Capability test passed"' 2>/dev/null || echo "failed")
-
-        if [[ "$cap_test" == "Capability test passed" ]]; then
-            log_pass "Minimal capabilities (CHOWN, DAC_OVERRIDE) work correctly"
-        else
-            log_fail "Minimal capability set test failed"
-        fi
+        log_fail "Minimal capability set test failed"
     fi
 }
 
@@ -403,7 +387,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         echo "  1 - One or more tests failed"
         echo ""
         echo "Requirements:"
-        echo "  - Podman or Docker installed"
+        echo "  - Docker installed"
         echo "  - Test image available (alpine:latest)"
         echo "  - Security configuration files in place"
         exit 0

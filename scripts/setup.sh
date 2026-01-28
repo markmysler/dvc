@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Cybersecurity Training Platform Setup Script
-# Sets up Podman, monitoring stack, and verifies multi-architecture support
+# Sets up Docker, monitoring stack, and verifies deployment
 
 set -euo pipefail
 
@@ -67,15 +67,6 @@ log_verbose() {
     fi
 }
 
-# Check if running as root
-check_root() {
-    if [[ $EUID -eq 0 ]]; then
-        log_error "This script should not be run as root for security reasons"
-        log_info "Podman supports rootless operation - please run as your normal user"
-        exit 1
-    fi
-}
-
 # Detect operating system
 detect_os() {
     log_verbose "Detecting operating system..."
@@ -91,121 +82,40 @@ detect_os() {
     fi
 }
 
-# Check for Podman installation
-check_podman() {
-    log_info "Checking Podman installation..."
+# Check for Docker installation
+check_docker() {
+    log_info "Checking Docker installation..."
 
-    if command -v podman >/dev/null 2>&1; then
-        PODMAN_VERSION=$(podman --version | cut -d' ' -f3)
-        log_success "Podman is installed (version: $PODMAN_VERSION)"
+    if command -v docker >/dev/null 2>&1; then
+        DOCKER_VERSION=$(docker --version | cut -d' ' -f3 | tr -d ',')
+        log_success "Docker is installed (version: $DOCKER_VERSION)"
 
-        # Check rootless support
-        if podman system info --format=json | grep -q '"rootless": true'; then
-            log_success "Podman rootless mode is configured"
+        # Check if Docker daemon is running
+        if docker info >/dev/null 2>&1; then
+            log_success "Docker daemon is running"
         else
-            log_warning "Podman is not running in rootless mode"
+            log_error "Docker daemon is not running"
+            log_info "Start Docker with: sudo systemctl start docker"
             return 1
         fi
     else
-        log_warning "Podman is not installed"
+        log_warning "Docker is not installed"
         return 1
     fi
 }
 
-# Install Podman
-install_podman() {
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "DRY RUN: Would install Podman for $OS"
-        return 0
-    fi
+# Check for Docker Compose
+check_docker_compose() {
+    log_info "Checking Docker Compose..."
 
-    log_info "Installing Podman..."
-
-    case $OS in
-        ubuntu|debian)
-            log_verbose "Installing via apt..."
-            sudo apt update
-            sudo apt install -y podman
-            ;;
-        fedora)
-            log_verbose "Installing via dnf..."
-            sudo dnf install -y podman
-            ;;
-        rhel|centos)
-            log_verbose "Installing via yum/dnf..."
-            if command -v dnf >/dev/null 2>&1; then
-                sudo dnf install -y podman
-            else
-                sudo yum install -y podman
-            fi
-            ;;
-        *)
-            log_error "Unsupported operating system for automatic installation: $OS"
-            log_info "Please install Podman manually: https://podman.io/getting-started/installation"
-            exit 1
-            ;;
-    esac
-
-    log_success "Podman installation completed"
-}
-
-# Check multi-architecture support
-check_multiarch() {
-    log_info "Checking multi-architecture support..."
-
-    # Check QEMU user emulation
-    if [[ -d /proc/sys/fs/binfmt_misc ]]; then
-        if ls /proc/sys/fs/binfmt_misc/qemu-* >/dev/null 2>&1; then
-            log_success "QEMU user emulation is available"
-        else
-            log_warning "QEMU user emulation not found"
-            if [[ "$DRY_RUN" == "false" ]]; then
-                install_qemu
-            fi
-        fi
+    if docker compose version >/dev/null 2>&1; then
+        COMPOSE_VERSION=$(docker compose version | cut -d' ' -f4 | tr -d 'v')
+        log_success "Docker Compose is available (version: $COMPOSE_VERSION)"
     else
-        log_warning "binfmt_misc not available"
+        log_error "Docker Compose not available"
+        log_info "Docker Compose comes with Docker Desktop or can be installed separately"
+        return 1
     fi
-
-    # Test multi-arch manifest creation
-    if command -v podman >/dev/null 2>&1; then
-        log_verbose "Testing manifest creation..."
-        if podman manifest create test-manifest >/dev/null 2>&1; then
-            podman manifest rm test-manifest >/dev/null 2>&1
-            log_success "Multi-architecture manifest support confirmed"
-        else
-            log_warning "Multi-architecture manifest creation failed"
-        fi
-    fi
-}
-
-# Install QEMU for multi-arch support
-install_qemu() {
-    if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "DRY RUN: Would install QEMU user emulation"
-        return 0
-    fi
-
-    log_info "Installing QEMU user emulation..."
-
-    case $OS in
-        ubuntu|debian)
-            sudo apt install -y qemu-user-static binfmt-support
-            ;;
-        fedora)
-            sudo dnf install -y qemu-user-static
-            ;;
-        rhel|centos)
-            if command -v dnf >/dev/null 2>&1; then
-                sudo dnf install -y qemu-user-static
-            else
-                sudo yum install -y qemu-user-static
-            fi
-            ;;
-        *)
-            log_warning "Cannot auto-install QEMU for $OS"
-            ;;
-    esac
 }
 
 # Create necessary directories
@@ -321,35 +231,33 @@ EOF
 run_health_checks() {
     log_info "Running health checks..."
 
-    # Check Podman functionality
-    if command -v podman >/dev/null 2>&1; then
-        if podman version >/dev/null 2>&1; then
-            log_success "Podman is functional"
+    # Check Docker functionality
+    if command -v docker >/dev/null 2>&1; then
+        if docker version >/dev/null 2>&1; then
+            log_success "Docker is functional"
         else
-            log_error "Podman version check failed"
+            log_error "Docker version check failed"
             return 1
         fi
 
         # Test container pull (small image)
         log_verbose "Testing container pull capability..."
-        if podman pull hello-world >/dev/null 2>&1; then
-            podman rmi hello-world >/dev/null 2>&1
+        if docker pull hello-world >/dev/null 2>&1; then
+            docker rmi hello-world >/dev/null 2>&1
             log_success "Container pull test passed"
         else
             log_warning "Container pull test failed - check network connectivity"
         fi
     else
-        log_error "Podman not found after installation"
+        log_error "Docker not found"
         return 1
     fi
 
-    # Check docker-compose compatibility
-    if command -v podman-compose >/dev/null 2>&1; then
-        log_success "podman-compose is available"
-    elif command -v docker-compose >/dev/null 2>&1; then
-        log_info "docker-compose found - can be used with Podman"
+    # Check Docker Compose
+    if docker compose version >/dev/null 2>&1; then
+        log_success "Docker Compose is available"
     else
-        log_warning "No compose tool found - manual container management required"
+        log_warning "Docker Compose not found"
     fi
 }
 
@@ -361,25 +269,20 @@ main() {
         log_info "Running in DRY RUN mode - no changes will be made"
     fi
 
-    check_root
     detect_os
 
-    # Check and install Podman if needed
-    if ! check_podman; then
-        install_podman
-
-        # Verify installation (skip verification in dry-run mode)
-        if [[ "$DRY_RUN" == "false" ]]; then
-            if ! check_podman; then
-                log_error "Podman installation verification failed"
-                exit 1
-            fi
-        else
-            log_info "DRY RUN: Skipping installation verification"
-        fi
+    # Check Docker and Docker Compose
+    if ! check_docker; then
+        log_error "Docker is not installed. Please install Docker first:"
+        log_info "Visit: https://docs.docker.com/get-docker/"
+        exit 1
     fi
 
-    check_multiarch
+    if ! check_docker_compose; then
+        log_error "Docker Compose is not available"
+        exit 1
+    fi
+
     create_directories
     set_permissions
     create_monitoring_configs
@@ -393,10 +296,11 @@ main() {
     if [[ "$DRY_RUN" == "false" ]]; then
         echo
         log_info "Next steps:"
-        echo "  1. Run 'npm start' to launch the monitoring stack"
-        echo "  2. Run 'npm run verify' to validate the installation"
-        echo "  3. Access Grafana at http://localhost:3000 (admin/admin)"
-        echo "  4. Access Prometheus at http://localhost:9090"
+        echo "  1. Run 'docker compose up -d' to start all services"
+        echo "  2. Run './scripts/verify.sh' to validate the deployment"
+        echo "  3. Access Frontend at http://localhost:3001"
+        echo "  4. Access Grafana at http://localhost:3000 (admin/admin)"
+        echo "  5. Access Prometheus at http://localhost:9090"
     fi
 }
 

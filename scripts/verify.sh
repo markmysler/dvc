@@ -91,89 +91,69 @@ skip_test() {
     ((TESTS_SKIPPED++))
 }
 
-# Test 1: Podman version and rootless mode
-test_podman_rootless() {
-    start_test "Podman installation and rootless operation"
+# Test 1: Docker version and daemon status
+test_docker_installed() {
+    start_test "Docker installation and daemon status"
 
-    if ! command -v podman >/dev/null 2>&1; then
-        fail_test "Podman is not installed"
+    if ! command -v docker >/dev/null 2>&1; then
+        fail_test "Docker is not installed"
         return 1
     fi
 
-    local podman_version
-    podman_version=$(podman --version 2>/dev/null | cut -d' ' -f3) || {
-        fail_test "Unable to get Podman version"
+    local docker_version
+    docker_version=$(docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',') || {
+        fail_test "Unable to get Docker version"
         return 1
     }
 
-    log_verbose "Podman version: $podman_version"
+    log_verbose "Docker version: $docker_version"
 
-    # Check rootless mode
-    local system_info
-    system_info=$(podman system info --format=json 2>/dev/null) || {
-        fail_test "Unable to get Podman system info"
-        return 1
-    }
-
-    if echo "$system_info" | grep -q '"rootless": true'; then
-        pass_test "Podman is running in rootless mode (version: $podman_version)"
+    # Check daemon status
+    if docker info >/dev/null 2>&1; then
+        pass_test "Docker daemon is running (version: $docker_version)"
     else
-        fail_test "Podman is not running in rootless mode"
+        fail_test "Docker daemon is not running"
         return 1
     fi
 
-    # Check if user namespaces are available
-    if [[ -f /proc/sys/user/max_user_namespaces ]]; then
-        local max_namespaces
-        max_namespaces=$(cat /proc/sys/user/max_user_namespaces)
-        log_verbose "Max user namespaces: $max_namespaces"
-        if [[ "$max_namespaces" -gt 0 ]]; then
-            pass_test "User namespaces are available (limit: $max_namespaces)"
+    # Check Docker socket
+    if [[ -S /var/run/docker.sock ]]; then
+        pass_test "Docker socket is accessible at /var/run/docker.sock"
+    else
+        fail_test "Docker socket not found"
+        return 1
+    fi
+}
+
+# Test 2: Docker Compose functionality
+test_compose_functionality() {
+    start_test "Docker Compose support"
+
+    # Check for Docker Compose
+    if docker compose version >/dev/null 2>&1; then
+        local version
+        version=$(docker compose version 2>/dev/null | cut -d' ' -f4 | tr -d 'v') || version="unknown"
+        log_verbose "Found Docker Compose: $version"
+        pass_test "Docker Compose is available (version: $version)"
+    else
+        fail_test "Docker Compose not found"
+        return 1
+    fi
+
+    # Test compose file validation if docker-compose.yml exists
+    if [[ -f "docker-compose.yml" ]]; then
+        if docker compose config >/dev/null 2>&1; then
+            pass_test "docker-compose.yml is valid"
         else
-            fail_test "User namespaces are disabled"
+            fail_test "docker-compose.yml validation failed"
             return 1
         fi
     else
-        log_warning "Cannot check user namespace limits"
+        skip_test "No docker-compose.yml file found to validate"
     fi
 }
 
-# Test 2: Compose functionality
-test_compose_functionality() {
-    start_test "Container orchestration support"
-
-    # Check for podman-compose
-    if command -v podman-compose >/dev/null 2>&1; then
-        local version
-        version=$(podman-compose --version 2>/dev/null | head -1) || version="unknown"
-        log_verbose "Found podman-compose: $version"
-        pass_test "podman-compose is available"
-        return 0
-    fi
-
-    # Check for docker-compose with Podman socket
-    if command -v docker-compose >/dev/null 2>&1; then
-        log_verbose "Found docker-compose, checking Podman compatibility"
-
-        # Test if Podman socket is available
-        if timeout 5 podman system service --timeout 1 >/dev/null 2>&1; then
-            pass_test "docker-compose can work with Podman socket"
-        else
-            log_warning "docker-compose found but Podman socket test failed"
-            skip_test "Container orchestration requires manual setup"
-        fi
-        return 0
-    fi
-
-    # Check for podman play kube as alternative
-    if podman play --help 2>/dev/null | grep -q "kube"; then
-        pass_test "podman play kube available as orchestration alternative"
-        return 0
-    fi
-
-    fail_test "No container orchestration tool found (podman-compose, docker-compose, or podman play)"
-    return 1
-}
+# Test 3: Container isolation
 
 # Test 3: Multi-architecture support
 test_multiarch_support() {
@@ -537,7 +517,7 @@ main() {
     echo
 
     # Run all tests
-    test_podman_rootless || true
+    test_docker_installed || true
     test_compose_functionality || true
     test_multiarch_support || true
     test_network_isolation || true

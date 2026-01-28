@@ -50,14 +50,13 @@ log_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $*"
 }
 
-# Check if container runtime is available
+# Check if Docker is available
 check_runtime() {
-    if command -v podman >/dev/null 2>&1; then
-        CONTAINER_CMD="podman"
-    elif command -v docker >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1; then
         CONTAINER_CMD="docker"
     else
-        log_error "Neither podman nor docker found. Cannot perform cleanup."
+        log_error "Docker not found. Cannot perform cleanup."
+        log_info "Please install Docker: https://docs.docker.com/get-docker/"
         exit 1
     fi
 
@@ -82,15 +81,9 @@ cleanup_containers() {
     log_info "Cleaning up stopped containers older than ${CONTAINER_AGE_HOURS} hours..."
 
     local stopped_containers
-    local cutoff_time=$(date -d "${CONTAINER_AGE_HOURS} hours ago" '+%Y-%m-%dT%H:%M:%S')
-
-    if [[ "$CONTAINER_CMD" == "podman" ]]; then
-        # Podman syntax with until filter
-        stopped_containers=$($CONTAINER_CMD ps -a --filter "status=exited" --filter "until=${CONTAINER_AGE_HOURS}h" -q 2>/dev/null || true)
-    else
-        # Docker syntax - use manual filtering since until filter varies by version
-        stopped_containers=$($CONTAINER_CMD ps -a --filter "status=exited" -q --format "table {{.ID}}\t{{.CreatedAt}}" | awk -v cutoff="$cutoff_time" 'NR>1 && $2" "$3 < cutoff {print $1}' 2>/dev/null || true)
-    fi
+    
+    # Use Docker prune with filter
+    stopped_containers=$($CONTAINER_CMD ps -a --filter "status=exited" --filter "until=${CONTAINER_AGE_HOURS}h" -q 2>/dev/null || true)
 
     if [[ -n "$stopped_containers" ]]; then
         local count=$(echo "$stopped_containers" | wc -l)
@@ -130,35 +123,17 @@ cleanup_images() {
 cleanup_volumes() {
     log_info "Cleaning up unused volumes older than ${VOLUME_AGE_HOURS} hours..."
 
-    if [[ "$CONTAINER_CMD" == "podman" ]]; then
-        # Podman volume cleanup
-        if [[ "$DRY_RUN" == "--dry-run" ]]; then
-            log_info "DRY RUN: Would remove unused volumes"
-            $CONTAINER_CMD volume prune --dry-run 2>/dev/null || log_warn "Could not check unused volumes"
-        else
-            local removed_volumes
-            removed_volumes=$($CONTAINER_CMD volume prune -f 2>/dev/null | grep "^deleted:" | wc -l || echo "0")
-
-            if [[ "$removed_volumes" -gt 0 ]]; then
-                log_success "Removed $removed_volumes unused volumes"
-            else
-                log_info "No unused volumes found for cleanup"
-            fi
-        fi
+    if [[ "$DRY_RUN" == "--dry-run" ]]; then
+        log_info "DRY RUN: Would remove unused volumes"
+        $CONTAINER_CMD volume prune --dry-run 2>/dev/null || log_warn "Could not check unused volumes"
     else
-        # Docker volume cleanup
-        if [[ "$DRY_RUN" == "--dry-run" ]]; then
-            log_info "DRY RUN: Would remove unused volumes"
-            $CONTAINER_CMD volume prune --dry-run 2>/dev/null || log_warn "Could not check unused volumes"
-        else
-            local removed_volumes
-            removed_volumes=$($CONTAINER_CMD volume prune -f 2>/dev/null | grep -c "^deleted:" || echo "0")
+        local removed_volumes
+        removed_volumes=$($CONTAINER_CMD volume prune -f 2>/dev/null | grep -c "deleted" || echo "0")
 
-            if [[ "$removed_volumes" -gt 0 ]]; then
-                log_success "Removed $removed_volumes unused volumes"
-            else
-                log_info "No unused volumes found for cleanup"
-            fi
+        if [[ "$removed_volumes" -gt 0 ]]; then
+            log_success "Removed $removed_volumes unused volumes"
+        else
+            log_info "No unused volumes found for cleanup"
         fi
     fi
 }
@@ -167,27 +142,17 @@ cleanup_volumes() {
 cleanup_build_cache() {
     log_info "Cleaning up build cache..."
 
-    if [[ "$CONTAINER_CMD" == "podman" ]]; then
-        if [[ "$DRY_RUN" == "--dry-run" ]]; then
-            log_info "DRY RUN: Would clean build cache"
-        else
-            # Podman doesn't have buildx cache, but we can clean system cache
-            $CONTAINER_CMD system reset --force 2>/dev/null || log_warn "Could not reset system cache"
-            log_info "Cleaned system cache"
-        fi
+    if [[ "$DRY_RUN" == "--dry-run" ]]; then
+        log_info "DRY RUN: Would clean build cache"
+        docker builder prune --dry-run 2>/dev/null || log_warn "Could not check build cache"
     else
-        if [[ "$DRY_RUN" == "--dry-run" ]]; then
-            log_info "DRY RUN: Would clean build cache"
-            docker builder prune --dry-run 2>/dev/null || log_warn "Could not check build cache"
-        else
-            local cache_cleaned
-            cache_cleaned=$(docker builder prune -f 2>/dev/null | grep -c "^deleted:" || echo "0")
+        local cache_cleaned
+        cache_cleaned=$(docker builder prune -f 2>/dev/null | grep -c "deleted" || echo "0")
 
-            if [[ "$cache_cleaned" -gt 0 ]]; then
-                log_success "Cleaned $cache_cleaned build cache items"
-            else
-                log_info "No build cache to clean"
-            fi
+        if [[ "$cache_cleaned" -gt 0 ]]; then
+            log_success "Cleaned $cache_cleaned build cache items"
+        else
+            log_info "No build cache to clean"
         fi
     fi
 }
@@ -198,9 +163,7 @@ cleanup_temp_files() {
 
     local temp_dirs=(
         "/tmp/containers-*"
-        "/tmp/podman-*"
         "/tmp/docker-*"
-        "$HOME/.local/share/containers/tmp/*"
     )
 
     for pattern in "${temp_dirs[@]}"; do
@@ -221,18 +184,10 @@ system_prune() {
 
     if [[ "$DRY_RUN" == "--dry-run" ]]; then
         log_info "DRY RUN: Would perform system prune"
-        if [[ "$CONTAINER_CMD" == "podman" ]]; then
-            $CONTAINER_CMD system prune --dry-run 2>/dev/null || log_warn "Could not check system resources"
-        else
-            $CONTAINER_CMD system prune --dry-run 2>/dev/null || log_warn "Could not check system resources"
-        fi
+        $CONTAINER_CMD system prune --dry-run 2>/dev/null || log_warn "Could not check system resources"
     else
         # Use system prune for comprehensive cleanup
-        if [[ "$CONTAINER_CMD" == "podman" ]]; then
-            $CONTAINER_CMD system prune -f --volumes 2>/dev/null || log_warn "System prune encountered issues"
-        else
-            $CONTAINER_CMD system prune -f 2>/dev/null || log_warn "System prune encountered issues"
-        fi
+        $CONTAINER_CMD system prune -f 2>/dev/null || log_warn "System prune encountered issues"
         log_success "System prune completed"
     fi
 }
