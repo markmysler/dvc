@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "challenges": [
+    {
+      "id": "web-basic-xss",
+      "name": "Basic XSS Challenge",
+      "description": "A simple web application vulnerable to cross-site scripting (XSS) attacks. Learn to identify and exploit reflected XSS vulnerabilities.",
+      "difficulty": "beginner",
+      "category": "web",
+      "points": 100,
+      "tags": ["xss", "web", "javascript", "injection"],
+      "container_spec": {
+        "image": "sec-prac/web-basic-xss:latest",
+        "ports": {
+          "3000": 3000
+        },
+        "environment": {
+          "FLAG": "FLAG{xss_vulnerabilities_are_dangerous_83f2a1}",
+          "NODE_ENV": "challenge",
+          "PORT": "3000"
+        },
+        "resource_limits": {
+          "memory": "256m",
+          "cpus": "0.5",
+          "pids_limit": 128
+        },
+        "security_profile": "challenge"
+      },
+      "metadata": {
+        "author": "Security Practice Platform",
+        "created": "2026-01-28",
+        "version": "1.0",
+        "learning_objectives": [
+          "Identify XSS vulnerabilities in web forms",
+          "Craft basic XSS payloads",
+          "Understand the impact of reflected XSS"
+        ],
+        "hints": [
+          "Look for user input that is reflected back in the page without proper sanitization",
+          "Try entering JavaScript code in the search form",
+          "The flag is revealed when XSS successfully executes"
+        ],
+        "solution_url": "/challenges/web-basic-xss/solution.md",
+        "estimated_time": "15-30 minutes"
+      }
+    }
+  ]
+}

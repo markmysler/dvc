@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}About - XSS Challenge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>About This Challenge</h1>
+
+    <div class="about-section">
+        <h2>What is Cross-Site Scripting (XSS)?</h2>
+        <p>Cross-Site Scripting (XSS) is a security vulnerability that occurs when a web application includes untrusted data in a web page without proper validation or escaping. This allows attackers to inject malicious scripts that execute in the victim's browser.</p>
+
+        <h3>Types of XSS</h3>
+        <ul>
+            <li><strong>Reflected XSS</strong>: Malicious script is reflected off a web server, such as in an error message or search result</li>
+            <li><strong>Stored XSS</strong>: Malicious script is permanently stored on the target server</li>
+            <li><strong>DOM-based XSS</strong>: Vulnerability exists in client-side code rather than server-side</li>
+        </ul>
+
+        <h3>This Challenge</h3>
+        <p>This challenge focuses on <strong>Reflected XSS</strong>. The vulnerability exists in the search functionality where user input is reflected back to the page without proper sanitization.</p>
+
+        <h3>Learning Objectives</h3>
+        <ul>
+            <li>Understand how XSS vulnerabilities occur</li>
+            <li>Learn to identify potential injection points</li>
+            <li>Practice crafting basic XSS payloads</li>
+            <li>Understand the impact and risks of XSS attacks</li>
+        </ul>
+
+        <h3>Prevention</h3>
+        <p>XSS vulnerabilities can be prevented by:</p>
+        <ul>
+            <li>Properly encoding/escaping user input</li>
+            <li>Using Content Security Policy (CSP) headers</li>
+            <li>Validating and sanitizing input on both client and server side</li>
+            <li>Using modern frameworks with built-in XSS protection</li>
+        </ul>
+
+        <div class="warning">
+            <h4>⚠️ Educational Use Only</h4>
+            <p>This application contains intentional security vulnerabilities for educational purposes. Do not use these techniques on systems you do not own or without explicit permission.</p>
+        </div>
+    </div>
+
+    <div class="back-link">
+        <a href="{{ url_for('index') }}" class="btn-secondary">← Back to Challenge</a>
+    </div>
+</div>
+{% endblock %}

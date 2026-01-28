@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - XSS Challenge{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Search Results</h1>
+
+    <div class="search-info">
+        <p>You searched for: <strong>{{ query }}</strong></p>
+        <!-- This is where the XSS vulnerability exists - query is not escaped -->
+    </div>
+
+    {% if flag %}
+    <div class="flag-reveal">
+        <h2>🎉 Congratulations!</h2>
+        <p>You successfully exploited the XSS vulnerability!</p>
+        <div class="flag">{{ flag }}</div>
+    </div>
+    {% endif %}
+
+    {% if results %}
+    <div class="results-section">
+        <h3>Found {{ results|length }} user(s):</h3>
+        <div class="user-list">
+            {% for user in results %}
+            <div class="user-card">
+                <h4>{{ user.name }}</h4>
+                <p>Email: {{ user.email }}</p>
+                <p>ID: {{ user.id }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif query %}
+    <div class="no-results">
+        <p>No users found matching your search criteria.</p>
+    </div>
+    {% endif %}
+
+    <div class="search-again">
+        <h3>Try another search:</h3>
+        <form method="GET" action="{{ url_for('search') }}" class="search-form">
+            <div class="form-group">
+                <input type="text" name="q" placeholder="Enter search term..." class="form-input" value="">
+                <button type="submit" class="btn-primary">Search</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="back-link">
+        <a href="{{ url_for('index') }}" class="btn-secondary">← Back to Home</a>
+    </div>
+</div>
+{% endblock %}
