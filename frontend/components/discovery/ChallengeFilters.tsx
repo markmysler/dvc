@@ -70,9 +70,11 @@ export function ChallengeFilters({
 
   // Update individual filter values
   const updateFilter = useCallback((key: keyof DiscoveryFilters, value: any) => {
+    // Convert "all" to empty string for consistency with filtering logic
+    const processedValue = value === "all" ? "" : value;
     onFiltersChange({
       ...filters,
-      [key]: value
+      [key]: processedValue
     });
   }, [filters, onFiltersChange]);
 
@@ -113,14 +115,14 @@ export function ChallengeFilters({
 
         {/* Category filter */}
         <Select
-          value={filters.category}
+          value={filters.category || "all"}
           onValueChange={(value) => updateFilter('category', value)}
         >
           <SelectTrigger className="w-full lg:w-[180px]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             {availableCategories.map((category) => (
               <SelectItem key={category} value={category}>
                 {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -131,14 +133,14 @@ export function ChallengeFilters({
 
         {/* Difficulty filter */}
         <Select
-          value={filters.difficulty}
+          value={filters.difficulty || "all"}
           onValueChange={(value) => updateFilter('difficulty', value)}
         >
           <SelectTrigger className="w-full lg:w-[180px]">
             <SelectValue placeholder="Difficulty" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Difficulties</SelectItem>
+            <SelectItem value="all">All Difficulties</SelectItem>
             {Object.entries(DIFFICULTY_LEVELS).map(([key, config]) => (
               <SelectItem key={key} value={key}>
                 {config.label}
@@ -251,14 +253,14 @@ export function ChallengeFilters({
               <div className="space-y-2">
                 <label className="text-sm font-medium">Completion Status</label>
                 <Select
-                  value={filters.completion_status}
+                  value={filters.completion_status || "all"}
                   onValueChange={(value) => updateFilter('completion_status', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="attempted">Attempted</SelectItem>
                     <SelectItem value="not-started">Not Started</SelectItem>
