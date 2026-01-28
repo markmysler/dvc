@@ -70,6 +70,7 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     # Configure CORS for frontend integration
     CORS(app, origins=[
         "http://localhost:3000",  # Next.js dev server
+        "http://localhost:3001",  # Next.js dev server
         "http://127.0.0.1:3000",
         "http://localhost:8080",  # Alternative frontend ports
         "http://127.0.0.1:8080",
@@ -207,10 +208,11 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         })
 
     # Register blueprints
-    from . import challenges, flags
+    import challenges
+    import flags
 
     app.register_blueprint(challenges.bp)
-    app.register_blueprint(flags.bp)
+    app.register_blueprint(flags.flags_bp)
 
     # Record start time for uptime calculation
     if 'START_TIME' not in app.config:

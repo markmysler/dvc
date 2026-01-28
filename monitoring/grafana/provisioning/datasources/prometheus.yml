@@ -1,44 +1,8 @@
-# Prometheus datasource configuration for Grafana
-# Local-only monitoring setup for Cybersecurity Training Platform
-
 apiVersion: 1
 
 datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://localhost:9090
+    url: http://prometheus:9090
     isDefault: true
-    jsonData:
-      # Time intervals
-      timeInterval: 15s
-      queryTimeout: 60s
-      httpMethod: POST
-
-      # Disable cloud features
-      manageAlerts: false
-      prometheusType: Prometheus
-      prometheusVersion: 2.40.0
-
-      # Custom headers (none needed for local setup)
-      customQueryParameters: ''
-
-      # Disable exemplars for simpler setup
-      exemplarTraceIdDestinations: []
-
-    secureJsonData: {}
-
-    # Read-only access
-    readOnly: false
-
-    # Basic configuration
-    editable: true
-    version: 1
-    uid: prometheus-local
-
-  # Future: Add additional local datasources if needed
-  # - name: Local-Loki
-  #   type: loki
-  #   access: proxy
-  #   url: http://localhost:3100
-  #   isDefault: false

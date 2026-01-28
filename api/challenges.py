@@ -42,7 +42,10 @@ def get_orchestrator() -> ChallengeOrchestrator:
     """Get global orchestrator instance"""
     global _orchestrator_instance
     if _orchestrator_instance is None:
-        _orchestrator_instance = ChallengeOrchestrator()
+        _orchestrator_instance = ChallengeOrchestrator(
+            challenges_path="../challenges/definitions/challenges.json",
+            security_profiles_path="../security/container-profiles.json"
+        )
     return _orchestrator_instance
 
 

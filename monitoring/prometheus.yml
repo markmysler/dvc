@@ -1,110 +1,20 @@
-# Prometheus Configuration for Cybersecurity Training Platform
-# Local monitoring with 30-day retention and container-focused metrics
 global:
-  scrape_interval: 15s # Default scrape interval for containers
-  evaluation_interval: 15s # Alert rule evaluation interval
-  external_labels:
-    monitor: 'cybersec-training-platform'
-    environment: 'local'
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
-# Rule files for recording rules and alerts
 rule_files:
-  - "rules/*.yml"
+  # - "first_rules.yml"
+  # - "second_rules.yml"
 
-# Alertmanager configuration (optional - for local alerts)
-# alerting:
-#   alertmanagers:
-#     - static_configs:
-#         - targets: ['localhost:9093']
-
-# Storage configuration
-storage:
-  tsdb:
-    retention.time: 30d
-    retention.size: 5GB
-    path: /home/mark/sec-prac/monitoring/data/prometheus
-
-# Scrape configuration
 scrape_configs:
-  # Node Exporter - System and host metrics
-  - job_name: 'node-exporter'
-    scrape_interval: 30s
-    static_configs:
-      - targets: ['localhost:9100']
-    metrics_path: /metrics
-    scrape_timeout: 10s
-
-  # Prometheus self-monitoring
   - job_name: 'prometheus'
-    scrape_interval: 30s
     static_configs:
       - targets: ['localhost:9090']
 
-  # Podman/Container metrics (when available)
-  - job_name: 'podman-stats'
-    scrape_interval: 15s
+  - job_name: 'node'
     static_configs:
-      - targets: ['localhost:9091']
-    metrics_path: /metrics
-    scrape_timeout: 10s
-    # Optional: Enable only if podman metrics endpoint is configured
+      - targets: ['node-exporter:9100']
 
-  # Future: Application metrics from challenge containers
-  - job_name: 'challenge-containers'
-    scrape_interval: 15s
+  - job_name: 'containers'
     static_configs:
-      - targets: []
-    # Will be populated dynamically by container orchestration
-
-# Recording rules for common queries
-recording_rules:
-  - name: container_resource_usage
-    rules:
-      - record: container_cpu_usage_percent
-        expr: rate(container_cpu_usage_seconds_total[5m]) * 100
-
-      - record: container_memory_usage_percent
-        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100
-
-      - record: container_network_io_rate
-        expr: rate(container_network_io_usage_bytes_total[5m])
-
-# Alert rules for resource thresholds
-alerting_rules:
-  - name: resource_alerts
-    rules:
-      - alert: HighMemoryUsage
-        expr: container_memory_usage_percent > 80
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Container {{ $labels.name }} memory usage is {{ $value }}%"
-          description: "Memory usage has been above 80% for more than 5 minutes"
-
-      - alert: HighCPUUsage
-        expr: container_cpu_usage_percent > 85
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Container {{ $labels.name }} CPU usage is {{ $value }}%"
-          description: "CPU usage has been above 85% for more than 10 minutes"
-
-      - alert: NodeExporterDown
-        expr: up{job="node-exporter"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Node Exporter is down"
-          description: "Node Exporter has been down for more than 1 minute"
-
-      - alert: DiskSpaceLow
-        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Disk space is running low"
-          description: "Available disk space is below 10%"
+      - targets: ['localhost:8080']  # Future: cAdvisor or equivalent
