@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   return (
-    <main className="container mx-auto py-8">
+    <div className="container mx-auto py-8">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
@@ -39,14 +39,14 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle>API Integration</CardTitle>
-              <CardDescription>Connection to Flask backend ready</CardDescription>
+              <CardDescription>TanStack Query + Flask backend</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                API client configured to communicate with localhost:5000 backend.
+                Complete API client with typed React Query hooks for challenge operations.
               </p>
-              <Button variant="outline" className="w-full" disabled>
-                Test API
+              <Button variant="outline" className="w-full">
+                ✓ Ready
               </Button>
             </CardContent>
           </Card>
@@ -58,7 +58,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Button, Table, Card, Badge, and Input components ready to use.
+                Button, Table, Card, Badge, Input, and Select components ready to use.
               </p>
               <Button variant="outline" className="w-full">
                 ✓ Ready
@@ -85,16 +85,48 @@ export default function Home() {
               </div>
               <div className="flex items-center justify-between">
                 <span>TanStack Query Integration</span>
-                <Badge variant="outline">In Progress</Badge>
+                <Badge>✓ Complete</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span>API Client Layer</span>
-                <Badge variant="outline">In Progress</Badge>
+                <Badge>✓ Complete</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* API Reference */}
+        <Card>
+          <CardHeader>
+            <CardTitle>API Integration Details</CardTitle>
+            <CardDescription>Available API endpoints and React Query hooks</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-medium mb-2">API Endpoints</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• GET /api/challenges</li>
+                  <li>• POST /api/challenges</li>
+                  <li>• DELETE /api/challenges/:id</li>
+                  <li>• POST /api/flags</li>
+                  <li>• GET /api/challenges/running</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">React Query Hooks</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• useChallenges()</li>
+                  <li>• useSpawnChallenge()</li>
+                  <li>• useStopChallenge()</li>
+                  <li>• useValidateFlag()</li>
+                  <li>• useRunningChallenges()</li>
+                </ul>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { QueryProvider } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,33 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background font-sans`}
       >
-        {children}
+        <QueryProvider>
+          <div className="min-h-screen flex flex-col">
+            <header className="border-b">
+              <div className="container mx-auto px-4 py-4">
+                <nav className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <h1 className="text-xl font-semibold">CyberSec Training</h1>
+                    <span className="text-sm text-muted-foreground">v3.0</span>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-muted-foreground">
+                      API: localhost:5000
+                    </span>
+                  </div>
+                </nav>
+              </div>
+            </header>
+            <main className="flex-1">
+              {children}
+            </main>
+            <footer className="border-t py-4">
+              <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+                Cybersecurity Training Platform - Local Deployment
+              </div>
+            </footer>
+          </div>
+        </QueryProvider>
       </body>
     </html>
   );
