@@ -85,7 +85,7 @@ export function ChallengeDetailModal({
   // Find active session for this challenge
   const activeSession = useMemo(() => {
     if (!challenge || !runningChallengesData) return null;
-    return runningChallengesData.running_challenges.find(
+    return runningChallengesData.challenges.find(
       (session) => session.challenge_id === challenge.id
     );
   }, [challenge, runningChallengesData]);

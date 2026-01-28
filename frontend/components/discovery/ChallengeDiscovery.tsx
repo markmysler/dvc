@@ -299,9 +299,9 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
                   {filteredChallenges.length} challenge{filteredChallenges.length !== 1 ? 's' : ''} found
                 </p>
 
-                {runningChallengesData?.running_challenges && runningChallengesData.running_challenges.length > 0 && (
+                {runningChallengesData?.challenges && runningChallengesData.challenges.length > 0 && (
                   <Badge variant="secondary">
-                    {runningChallengesData.running_challenges.length} running
+                    {runningChallengesData.challenges.length} running
                   </Badge>
                 )}
               </div>

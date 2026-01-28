@@ -73,9 +73,9 @@ export interface ChallengesListResponse {
 }
 
 export interface RunningChallengesResponse {
-  success: boolean;
-  running_challenges: ChallengeSession[];
-  total_count: number;
+  status: string;
+  challenges: ChallengeSession[];
+  count: number;
 }
 
 // Error types

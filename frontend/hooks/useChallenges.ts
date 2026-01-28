@@ -94,8 +94,8 @@ export function useSpawnChallenge() {
 
             return {
               ...oldData,
-              running_challenges: [...oldData.running_challenges, data.challenge_session!],
-              total_count: oldData.total_count + 1,
+              challenges: [...oldData.challenges, data.challenge_session!],
+              count: oldData.count + 1,
             };
           }
         );
@@ -127,10 +127,10 @@ export function useStopChallenge() {
 
           return {
             ...oldData,
-            running_challenges: oldData.running_challenges.filter(
+            challenges: oldData.challenges.filter(
               (session) => session.session_id !== sessionId
             ),
-            total_count: Math.max(0, oldData.total_count - 1),
+            count: Math.max(0, oldData.count - 1),
           };
         }
       );
