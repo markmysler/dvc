@@ -9,23 +9,23 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Core Challenge Management
 
-- [ ] **CHAL-01**: User can browse challenges via discovery interface
+- [x] **CHAL-01**: User can browse challenges via discovery interface
 - [x] **CHAL-02**: User can spawn challenge containers on-demand
 - [x] **CHAL-03**: User can stop running challenge containers
 - [x] **CHAL-04**: System validates submitted flags against running containers
-- [ ] **CHAL-05**: System supports multi-difficulty categorization (easy/medium/hard)
-- [ ] **CHAL-06**: System tracks challenge completion progress and status
+- [x] **CHAL-05**: System supports multi-difficulty categorization (easy/medium/hard)
+- [x] **CHAL-06**: System tracks challenge completion progress and status
 - [x] **CHAL-07**: System generates unique flags for each container spawn
 - [x] **CHAL-08**: Platform operates entirely locally without cloud dependencies
 - [x] **CHAL-09**: System provides disposable container architecture with clean resets
 
 ### Learning & Discovery
 
-- [ ] **DISC-01**: User can search challenges by multiple criteria
-- [ ] **DISC-02**: User can filter challenges by various attributes
-- [ ] **DISC-03**: System organizes challenges by vulnerability type categories
-- [ ] **DISC-04**: User can view detailed challenge descriptions and metadata
-- [ ] **DISC-05**: System provides analytics and skill tracking capabilities
+- [x] **DISC-01**: User can search challenges by multiple criteria
+- [x] **DISC-02**: User can filter challenges by various attributes
+- [x] **DISC-03**: System organizes challenges by vulnerability type categories
+- [x] **DISC-04**: User can view detailed challenge descriptions and metadata
+- [x] **DISC-05**: System provides analytics and skill tracking capabilities
 - [ ] **DISC-06**: System supports custom challenge import via configuration
 
 ### Infrastructure & Security
@@ -76,20 +76,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHAL-01 | Phase 3 | Pending |
+| CHAL-01 | Phase 3 | Complete |
 | CHAL-02 | Phase 2 | Complete |
 | CHAL-03 | Phase 2 | Complete |
 | CHAL-04 | Phase 2 | Complete |
-| CHAL-05 | Phase 3 | Pending |
-| CHAL-06 | Phase 3 | Pending |
+| CHAL-05 | Phase 3 | Complete |
+| CHAL-06 | Phase 3 | Complete |
 | CHAL-07 | Phase 2 | Complete |
 | CHAL-08 | Phase 1 | Pending |
 | CHAL-09 | Phase 1 | Pending |
-| DISC-01 | Phase 3 | Pending |
-| DISC-02 | Phase 3 | Pending |
-| DISC-03 | Phase 3 | Pending |
-| DISC-04 | Phase 3 | Pending |
-| DISC-05 | Phase 3 | Pending |
+| DISC-01 | Phase 3 | Complete |
+| DISC-02 | Phase 3 | Complete |
+| DISC-03 | Phase 3 | Complete |
+| DISC-04 | Phase 3 | Complete |
+| DISC-05 | Phase 3 | Complete |
 | DISC-06 | Phase 4 | Pending |
 | INFR-01 | Phase 1 | Pending |
 | INFR-02 | Phase 1 | Pending |
