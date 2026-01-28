@@ -178,15 +178,15 @@ class ChallengeOrchestrator:
             'cap_drop': profile.get('capDrop', ['ALL']),
             'cap_add': profile.get('capAdd', []),
             'user': profile.get('user', '1000:1000'),
-            'read_only': profile.get('readOnlyRootfs', True),
+            'read_only': profile.get('readOnlyRootfs', False),  # Allow write for challenge apps
             'security_opt': profile.get('securityOpts', ['no-new-privileges:true']),
 
             # Resource limits from profile and challenge
-            'mem_limit': container_spec.get('resource_limits', {}).get('memory', '256m'),
+            'mem_limit': container_spec.get('resource_limits', {}).get('memory', '512m'),
             'nano_cpus': self._parse_cpu_limit(
-                container_spec.get('resource_limits', {}).get('cpus', '0.5')
+                container_spec.get('resource_limits', {}).get('cpus', '1.0')
             ),
-            'pids_limit': container_spec.get('resource_limits', {}).get('pids_limit', 128),
+            'pids_limit': container_spec.get('resource_limits', {}).get('pids_limit', 256),
 
             # Network isolation
             'network_mode': 'bridge',
@@ -204,10 +204,10 @@ class ChallengeOrchestrator:
             'ports': container_spec.get('ports', {}),
         }
 
-        # Additional ulimits if specified
+        # Additional ulimits if specified (with higher defaults for challenges)
         if 'ulimits' in profile:
             security_config['ulimits'] = [
-                docker.types.Ulimit(name=name, soft=limits['soft'], hard=limits['hard'])
+                docker.types.Ulimit(name=name, soft=max(limits['soft'], 1024), hard=max(limits['hard'], 2048))
                 for name, limits in profile['ulimits'].items()
             ]
 
