@@ -10,12 +10,12 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Core Challenge Management
 
 - [ ] **CHAL-01**: User can browse challenges via discovery interface
-- [ ] **CHAL-02**: User can spawn challenge containers on-demand
-- [ ] **CHAL-03**: User can stop running challenge containers
-- [ ] **CHAL-04**: System validates submitted flags against running containers
+- [x] **CHAL-02**: User can spawn challenge containers on-demand
+- [x] **CHAL-03**: User can stop running challenge containers
+- [x] **CHAL-04**: System validates submitted flags against running containers
 - [ ] **CHAL-05**: System supports multi-difficulty categorization (easy/medium/hard)
 - [ ] **CHAL-06**: System tracks challenge completion progress and status
-- [ ] **CHAL-07**: System generates unique flags for each container spawn
+- [x] **CHAL-07**: System generates unique flags for each container spawn
 - [x] **CHAL-08**: Platform operates entirely locally without cloud dependencies
 - [x] **CHAL-09**: System provides disposable container architecture with clean resets
 
@@ -77,12 +77,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CHAL-01 | Phase 3 | Pending |
-| CHAL-02 | Phase 2 | Pending |
-| CHAL-03 | Phase 2 | Pending |
-| CHAL-04 | Phase 2 | Pending |
+| CHAL-02 | Phase 2 | Complete |
+| CHAL-03 | Phase 2 | Complete |
+| CHAL-04 | Phase 2 | Complete |
 | CHAL-05 | Phase 3 | Pending |
 | CHAL-06 | Phase 3 | Pending |
-| CHAL-07 | Phase 2 | Pending |
+| CHAL-07 | Phase 2 | Complete |
 | CHAL-08 | Phase 1 | Pending |
 | CHAL-09 | Phase 1 | Pending |
 | DISC-01 | Phase 3 | Pending |
