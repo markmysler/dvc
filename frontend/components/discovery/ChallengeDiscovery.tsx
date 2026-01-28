@@ -14,12 +14,13 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ChallengeCard } from './ChallengeCard';
+import { ChallengeTable } from './ChallengeTable';
+import { ChallengeFilters } from './ChallengeFilters';
 import { useChallenges, useSpawnChallenge, useRunningChallenges } from '@/hooks/useChallenges';
-import { type Challenge, type DiscoveryViewState, CHALLENGE_CATEGORIES } from '@/lib/types';
-import { Grid, List, Search, Filter, AlertCircle, Loader2 } from 'lucide-react';
+import { type Challenge, type DiscoveryViewState, type DiscoveryFilters } from '@/lib/types';
+import { Grid, List, AlertCircle, Loader2 } from 'lucide-react';
 
 interface ChallengeDiscoveryProps {
   initialData?: any;
@@ -32,22 +33,15 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
   const spawnMutation = useSpawnChallenge();
 
   // View state
-  const [viewState, setViewState] = useState<DiscoveryViewState>({
-    view: 'grid',
-    filters: {
-      search: '',
-      category: '',
-      difficulty: '',
-      completion_status: '',
-      tags: [],
-      sort_by: 'name',
-      sort_order: 'asc',
-    },
-    pagination: {
-      page: 1,
-      per_page: 20,
-      total: 0,
-    },
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [filters, setFilters] = useState<DiscoveryFilters>({
+    search: '',
+    category: '',
+    difficulty: '',
+    completion_status: '',
+    tags: [],
+    sort_by: 'name',
+    sort_order: 'asc',
   });
 
   // Selected challenge for detail modal
@@ -69,8 +63,8 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
     let filtered = [...challenges];
 
     // Search filter
-    if (viewState.filters.search) {
-      const searchTerm = viewState.filters.search.toLowerCase();
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
       filtered = filtered.filter(
         (challenge) =>
           challenge.name.toLowerCase().includes(searchTerm) ||
@@ -80,20 +74,27 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
     }
 
     // Category filter
-    if (viewState.filters.category) {
-      filtered = filtered.filter((challenge) => challenge.category === viewState.filters.category);
+    if (filters.category) {
+      filtered = filtered.filter((challenge) => challenge.category === filters.category);
     }
 
     // Difficulty filter
-    if (viewState.filters.difficulty) {
-      filtered = filtered.filter((challenge) => challenge.difficulty === viewState.filters.difficulty);
+    if (filters.difficulty) {
+      filtered = filtered.filter((challenge) => challenge.difficulty === filters.difficulty);
+    }
+
+    // Tag filters
+    if (filters.tags.length > 0) {
+      filtered = filtered.filter((challenge) =>
+        filters.tags.some((tag) => challenge.tags.includes(tag))
+      );
     }
 
     // Sort challenges
     filtered.sort((a, b) => {
       let aValue: any, bValue: any;
 
-      switch (viewState.filters.sort_by) {
+      switch (filters.sort_by) {
         case 'name':
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
@@ -119,19 +120,13 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
           return 0;
       }
 
-      if (aValue < bValue) return viewState.filters.sort_order === 'asc' ? -1 : 1;
-      if (aValue > bValue) return viewState.filters.sort_order === 'asc' ? 1 : -1;
+      if (aValue < bValue) return filters.sort_order === 'asc' ? -1 : 1;
+      if (aValue > bValue) return filters.sort_order === 'asc' ? 1 : -1;
       return 0;
     });
 
     return filtered;
-  }, [challenges, viewState.filters]);
-
-  // Get unique categories for filter options
-  const availableCategories = useMemo(() => {
-    const categories = [...new Set(challenges.map((c) => c.category))];
-    return categories.sort();
-  }, [challenges]);
+  }, [challenges, filters]);
 
   // Handle challenge spawning
   const handleSpawnChallenge = async (challengeId: string) => {
@@ -151,22 +146,26 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
   };
 
   // Handle filter changes
-  const updateFilter = (key: keyof typeof viewState.filters, value: any) => {
-    setViewState((prev) => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        [key]: value,
-      },
-    }));
+  const handleFiltersChange = (newFilters: DiscoveryFilters) => {
+    setFilters(newFilters);
+  };
+
+  // Handle clear filters
+  const handleClearFilters = () => {
+    setFilters({
+      search: '',
+      category: '',
+      difficulty: '',
+      completion_status: '',
+      tags: [],
+      sort_by: 'name',
+      sort_order: 'asc',
+    });
   };
 
   // Toggle view mode
   const toggleViewMode = () => {
-    setViewState((prev) => ({
-      ...prev,
-      view: prev.view === 'grid' ? 'table' : 'grid',
-    }));
+    setViewMode((prev) => prev === 'grid' ? 'table' : 'grid');
   };
 
   // Loading state
@@ -222,7 +221,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
           {/* View mode toggle */}
           <div className="flex items-center gap-2">
             <Button
-              variant={viewState.view === 'grid' ? 'default' : 'outline'}
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
               size="sm"
               onClick={toggleViewMode}
             >
@@ -230,7 +229,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
               Grid
             </Button>
             <Button
-              variant={viewState.view === 'table' ? 'default' : 'outline'}
+              variant={viewMode === 'table' ? 'default' : 'outline'}
               size="sm"
               onClick={toggleViewMode}
             >
@@ -240,46 +239,13 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
           </div>
         </div>
 
-        {/* Search and filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search challenges by name, description, or tags..."
-              value={viewState.filters.search}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Category filter */}
-          <select
-            className="px-3 py-2 border rounded-md bg-background text-sm"
-            value={viewState.filters.category}
-            onChange={(e) => updateFilter('category', e.target.value)}
-          >
-            <option value="">All Categories</option>
-            {availableCategories.map((category) => (
-              <option key={category} value={category}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </option>
-            ))}
-          </select>
-
-          {/* Difficulty filter */}
-          <select
-            className="px-3 py-2 border rounded-md bg-background text-sm"
-            value={viewState.filters.difficulty}
-            onChange={(e) => updateFilter('difficulty', e.target.value)}
-          >
-            <option value="">All Difficulties</option>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-            <option value="expert">Expert</option>
-          </select>
-        </div>
+        {/* Filters */}
+        <ChallengeFilters
+          challenges={challenges}
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+        />
 
         {/* Results summary */}
         <div className="flex items-center justify-between">
@@ -296,7 +262,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
       </div>
 
       {/* Challenge grid/table */}
-      {viewState.view === 'grid' ? (
+      {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredChallenges.map((challenge) => (
             <ChallengeCard
@@ -309,9 +275,13 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 text-muted-foreground">
-          Table view coming next...
-        </div>
+        <ChallengeTable
+          challenges={filteredChallenges}
+          onSpawn={handleSpawnChallenge}
+          onViewDetails={handleViewDetails}
+          isSpawning={spawnMutation.isPending}
+          spawningChallengeId={spawnMutation.variables?.challenge_id}
+        />
       )}
 
       {/* Empty state */}
@@ -324,20 +294,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
               Try adjusting your search terms or filters to find challenges.
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setViewState((prev) => ({
-                ...prev,
-                filters: {
-                  ...prev.filters,
-                  search: '',
-                  category: '',
-                  difficulty: '',
-                },
-              }));
-            }}
-          >
+          <Button variant="outline" onClick={handleClearFilters}>
             Clear Filters
           </Button>
         </div>
