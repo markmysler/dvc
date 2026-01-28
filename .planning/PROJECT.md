@@ -16,15 +16,15 @@ Users can safely practice real vulnerability exploitation on isolated, disposabl
 
 ### Active
 
-- [ ] Discovery page with challenge browsing (Netflix-like interface)
-- [ ] Challenge filtering by newest, vulnerability type, difficulty, completion status
-- [ ] Individual challenge detail pages with description and spawn controls
-- [ ] On-demand container spawning via Docker Compose
-- [ ] Auto-generated flag injection into containers via environment variables
-- [ ] Flag validation by reading flag.txt from running containers
-- [ ] Challenge state persistence in local JSON file (was-started, is-running, was-completed)
+- [x] Discovery page with challenge browsing (Netflix-like interface)
+- [x] Challenge filtering by newest, vulnerability type, difficulty, completion status
+- [x] Individual challenge detail pages with description and spawn controls
+- [x] On-demand container spawning via Docker API
+- [x] Auto-generated flag injection into containers via environment variables
+- [x] Flag validation via HMAC-based cryptographic system
+- [x] Challenge state persistence in memory with session tracking
 - [ ] Automatic container cleanup when flags are validated
-- [ ] Manual container stop functionality
+- [x] Manual container stop functionality
 - [ ] Support for multi-container challenges (main + support containers)
 - [ ] Challenge configuration system for adding new vulnerabilities
 
@@ -44,20 +44,21 @@ Target vulnerabilities include SQLi, XSS, path traversal, and any OWASP category
 
 ## Constraints
 
-- **Deployment**: Local-only — no cloud hosting requirements
+- **Deployment**: Docker Compose — all services containerized
 - **Dependencies**: Docker and Docker Compose required on host system
-- **Storage**: File-based persistence — no external databases
+- **Storage**: In-memory session management, localStorage for progress tracking
 - **Security**: Containers must be isolated and fully disposable
-- **Images**: All container images must be available from Docker Hub
+- **Architecture**: Flask REST API + Next.js frontend + Prometheus/Grafana monitoring
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Auto-generated flags via env vars | Prevents static flag sharing, more realistic | — Pending |
-| Docker exec validation via flag.txt | Simple, reliable validation method | — Pending |
-| JSON state file | Lightweight persistence without database complexity | — Pending |
-| Configuration-based challenge addition | Keeps platform simple, challenges managed in code | — Pending |
+| HMAC-based flag generation | Cryptographically secure, prevents tampering | ✓ Implemented |
+| Docker API orchestration | Direct container control, no CLI needed | ✓ Implemented |
+| In-memory session management | Fast, no database required for local use | ✓ Implemented |
+| Docker Compose deployment | All services containerized, easy startup | ✓ Implemented |
+| Configuration-based challenges | Keeps platform simple, challenges managed in JSON | ✓ Implemented |
 
 ---
 *Last updated: 2026-01-27 after initialization*

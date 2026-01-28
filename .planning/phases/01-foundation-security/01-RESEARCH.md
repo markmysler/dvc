@@ -6,13 +6,13 @@
 
 ## Summary
 
-Container security in 2026 centers on layered defense through namespace isolation, capability restriction, and automated resource management. The standard approach combines Docker or Podman as the container runtime with Prometheus/Grafana for monitoring and automated cleanup scripts for resource management.
+Container security in 2026 centers on layered defense through namespace isolation, capability restriction, and automated resource management. The standard approach combines Docker as the container runtime with Prometheus/Grafana for monitoring and Docker's built-in cleanup mechanisms for resource management.
 
-Podman has emerged as the preferred choice for security-conscious deployments due to its rootless operation, daemonless architecture, and reduced default capabilities. Docker remains viable with proper hardening but requires more configuration to achieve equivalent security posture.
+Docker with proper security hardening provides robust container isolation through security profiles, capability restrictions, and resource limits. The platform uses Docker Compose for orchestration, simplifying deployment and service management.
 
-Key architectural decisions include choosing Podman for enhanced default security, implementing automated cleanup via cron jobs, and establishing monitoring through the Prometheus/Grafana stack with container-specific exporters.
+Key architectural decisions include using Docker for broad compatibility, implementing security hardening through compose configuration, and establishing monitoring through the Prometheus/Grafana stack with cAdvisor for container metrics.
 
-**Primary recommendation:** Use Podman as primary container runtime with automated cleanup, Prometheus/Grafana monitoring, and layered security through seccomp/AppArmor/SELinux.
+**Primary recommendation:** Use Docker with Docker Compose orchestration, security hardening via compose config, Prometheus/Grafana monitoring with cAdvisor, and Docker's built-in cleanup mechanisms.
 
 ## Standard Stack
 
@@ -21,37 +21,35 @@ The established libraries/tools for this domain:
 ### Core
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| Podman | 5.4+ | Container runtime | Rootless by default, daemonless architecture, better security posture |
-| Docker | 27.0+ | Container runtime (alternative) | Mature ecosystem, broad compatibility, established tooling |
-| systemd | Latest | Service management | Native container lifecycle management, automatic restarts |
+| Docker | 27.0+ | Container runtime | Industry standard, broad ecosystem, extensive tooling |
+| Docker Compose | 2.24+ | Service orchestration | Simplified multi-container deployment and management |
+| Python Docker SDK | 7.0+ | Container API | Programmatic container control from Flask backend |
 
 ### Supporting
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
 | Prometheus | 2.50+ | Metrics collection | System and container monitoring |
-| Grafana | 10.0+ | Metrics visualization | Dashboard creation and alerting |
-| Node Exporter | 1.7+ | System metrics | Host-level monitoring (works with both Docker/Podman) |
-| cAdvisor | 0.48+ | Container metrics | Container-level monitoring (Docker only) |
-| Buildah | 1.35+ | Multi-arch builds | Building containers without daemon |
+| Grafana | 10.4+ | Metrics visualization | Dashboard creation and alerting |
+| Node Exporter | 1.7+ | System metrics | Host-level system monitoring |
+| cAdvisor | 0.47+ | Container metrics | Container-level resource monitoring |
 
 ### Alternatives Considered
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| Podman | Docker | Docker has better container-level monitoring support but requires more security hardening |
-| systemd | Docker Compose | Compose better for dev environments, systemd better for production services |
+| Docker | Podman | Podman has rootless-by-default but Docker has better tooling ecosystem |
+| Docker Compose | Kubernetes | Kubernetes better for production scale but overkill for local development |
 | Prometheus | InfluxDB | InfluxDB better for time-series but Prometheus has better container ecosystem |
 
 **Installation:**
 ```bash
-# Podman (RHEL/Fedora)
-dnf install podman
+# Docker (most platforms)
+curl -fsSL https://get.docker.com | sh
 
-# Podman (Debian/Ubuntu)
-apt install podman
+# Docker Compose (included with Docker Desktop, or standalone)
+# Already included in modern Docker installations
 
-# Monitoring stack
-podman run -d --name prometheus prom/prometheus:latest
-podman run -d --name grafana grafana/grafana:latest
+# Monitoring stack via Docker Compose
+docker compose up -d prometheus grafana node-exporter cadvisor
 ```
 
 ## Architecture Patterns
@@ -66,38 +64,73 @@ container-platform/
 └── services/        # systemd service files
 ```
 
-### Pattern 1: Rootless Container Isolation
-**What:** Run containers as non-root user with namespace isolation
+### Pattern 1: Container Security Hardening
+**What:** Run containers with security restrictions and capability limitations
 **When to use:** Default for all container deployments
 **Example:**
-```bash
-# Source: https://docs.podman.io/en/latest/markdown/podman-run.1.html
-podman run --rm \
-  --security-opt no-new-privileges \
-  --cap-drop ALL \
-  --cap-add CHOWN \
-  --read-only \
-  --tmpfs /tmp \
-  myapp:latest
+```yaml
+# Source: https://docs.docker.com/compose/compose-file/
+services:
+  api:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
 ```
 
-### Pattern 2: Automated Resource Cleanup
-**What:** Scheduled cleanup of stopped containers and unused resources
-**When to use:** Production systems with container churn
+### Pattern 2: Docker Compose Orchestration
+**What:** Multi-service deployment with networking and volumes
+**When to use:** Production systems with multiple interconnected services
 **Example:**
-```bash
-# Source: https://docs.docker.com/engine/manage-resources/pruning/
-#!/bin/bash
-# Cleanup script for cron
-podman system prune -f --filter "until=24h"
-podman volume prune -f --filter "until=168h"  # 1 week for volumes
+```yaml
+# Source: https://docs.docker.com/compose/
+version: '3.8'
+services:
+  api:
+    build: ./api
+    networks:
+      - backend
+    volumes:
+      - ./data:/app/data:ro
+  
+  frontend:
+    build: ./frontend
+    networks:
+      - frontend
+    depends_on:
+      - api
+
+networks:
+  backend:
+    internal: false
+  frontend:
+    internal: false
 ```
 
-### Pattern 3: Multi-Architecture Support
-**What:** Build and run containers for both ARM64 and x64
-**When to use:** Cross-platform deployment requirements
+### Pattern 3: Container Monitoring with cAdvisor
+**What:** Collect container metrics for Prometheus scraping
+**When to use:** Production deployments requiring container observability
 **Example:**
-```bash
+```yaml
+# Source: https://github.com/google/cadvisor
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8080:8080"
+```
 # Source: Multi-architecture container research
 podman build --platform=linux/amd64,linux/arm64 \
   --manifest myapp-manifest \

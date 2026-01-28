@@ -50,7 +50,7 @@
 | Security-first phase ordering | Container vulnerabilities compromise entire platform | Roadmap | Locked |
 | 4-phase structure | Quick depth setting, natural requirement boundaries | Roadmap | Locked |
 | Local-only architecture | Simplicity, privacy, zero cloud dependencies | Roadmap | Locked |
-| Podman over Docker | Enhanced security posture with rootless operation by default | 01-01 | Implemented |
+| Docker containerization | Industry standard with broad compatibility and tooling | 01-01 | Implemented |
 | Multi-architecture support | ARM64 and x64 deployment flexibility for modern hardware | 01-01 | Implemented |
 | Monitoring-first approach | Early operational visibility during development | 01-01 | Implemented |
 | JSON security profiles | Easy runtime integration with container commands | 01-02 | Implemented |
@@ -95,7 +95,7 @@ None currently identified.
 
 ### Context for Handoffs
 - **Project type:** Local cybersecurity training platform
-- **Architecture:** Next.js + Docker + SQLite, local-only deployment
+- **Architecture:** Next.js + Flask API + Docker Compose, containerized deployment
 - **Security priority:** Container isolation critical for safe vulnerability practice
 - **UX goal:** Netflix-like discovery interface for challenge browsing
 
@@ -112,12 +112,11 @@ None currently identified.
 - Success criteria defined for observable user behaviors
 
 ### For Execution
-- Phase 1 foundation completed: Podman runtime, monitoring stack, automation scripts, security hardening
-- Container security architecture implemented with rootless operation and comprehensive hardening
-- Resource management with automated cleanup and systemd scheduling
-- Comprehensive security validation framework with 10-test suite
-- Complete monitoring infrastructure with Prometheus, Grafana, and automation
-- Phase 2 challenge engine completed: Challenge definition system, container orchestration, secure challenge spawning
+- Phase 1 foundation completed: Docker runtime, monitoring stack (Prometheus/Grafana), automation scripts, security hardening
+- Container security architecture implemented with security profiles and comprehensive hardening
+- Resource management with automated cleanup
+- Comprehensive monitoring infrastructure with Prometheus, Grafana, Node Exporter, and cAdvisor
+- Phase 2 challenge engine completed: Challenge definition system, Docker API orchestration, secure challenge spawning
 - Challenge lifecycle management with session tracking and automatic cleanup
 - Security profile integration for challenge containers while maintaining isolation
 - Phase 3 discovery interface completed: Netflix-style challenge browsing, progress analytics, URL state management
