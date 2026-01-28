@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChallengeCard } from './ChallengeCard';
 import { ChallengeTable } from './ChallengeTable';
 import { ChallengeFilters } from './ChallengeFilters';
+import { ChallengeDetailModal } from './ChallengeDetailModal';
 import { useChallenges, useSpawnChallenge, useRunningChallenges } from '@/hooks/useChallenges';
 import { type Challenge, type DiscoveryViewState, type DiscoveryFilters } from '@/lib/types';
 import { Grid, List, AlertCircle, Loader2 } from 'lucide-react';
@@ -144,6 +145,18 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
   const handleViewDetails = (challengeId: string) => {
     setSelectedChallengeId(challengeId);
   };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setSelectedChallengeId(null);
+  };
+
+  // Get selected challenge object
+  const selectedChallenge = useMemo(() => {
+    return selectedChallengeId
+      ? challenges.find(c => c.id === selectedChallengeId) || null
+      : null;
+  }, [selectedChallengeId, challenges]);
 
   // Handle filter changes
   const handleFiltersChange = (newFilters: DiscoveryFilters) => {
@@ -299,6 +312,13 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
           </Button>
         </div>
       )}
+
+      {/* Challenge detail modal */}
+      <ChallengeDetailModal
+        challenge={selectedChallenge}
+        isOpen={selectedChallengeId !== null}
+        onClose={handleModalClose}
+      />
     </div>
   );
 }
