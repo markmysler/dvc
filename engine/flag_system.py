@@ -20,7 +20,15 @@ Security features:
 import hmac
 import hashlib
 import re
-from typing import Optional
+
+# Constants for flag system configuration
+FLAG_PREFIX = "flag"
+FLAG_HEX_LENGTH = 16
+FLAG_SEPARATOR = ":"
+ENCODING = 'utf-8'
+
+# Compiled regex for flag format validation (optimization)
+FLAG_PATTERN = re.compile(r'^flag\{[0-9a-f]{16}\}$')
 
 
 class FlagGenerator:
@@ -37,7 +45,12 @@ class FlagGenerator:
 
         Args:
             secret_key: Secret key for HMAC generation
+
+        Raises:
+            ValueError: If secret_key is empty or None
         """
+        if not secret_key:
+            raise ValueError("Secret key cannot be empty or None")
         self.secret_key = secret_key
 
     def generate(self, challenge_id: str, user_id: str, instance_data: str) -> str:
@@ -68,7 +81,12 @@ class FlagValidator:
 
         Args:
             secret_key: Secret key for HMAC validation
+
+        Raises:
+            ValueError: If secret_key is empty or None
         """
+        if not secret_key:
+            raise ValueError("Secret key cannot be empty or None")
         self.secret_key = secret_key
 
     def validate(self, flag: str, challenge_id: str, user_id: str, instance_data: str) -> bool:
@@ -103,26 +121,33 @@ def generate_unique_flag(challenge_id: str, user_id: str, instance_data: str, se
     Returns:
         Flag in CTF format: flag{16-character-hex}
 
+    Raises:
+        ValueError: If any parameter is empty or None
+
     Example:
         >>> flag = generate_unique_flag("web-xss-basic", "user123", "ts:1234,nonce:abc", "secret")
         >>> print(flag)
         flag{a1b2c3d4e5f67890}
     """
-    # Combine all input parameters with colons as separator
-    combined_input = f"{challenge_id}:{user_id}:{instance_data}"
+    # Validate input parameters
+    if not all([challenge_id, user_id, instance_data, secret_key]):
+        raise ValueError("All parameters (challenge_id, user_id, instance_data, secret_key) must be non-empty")
+
+    # Combine all input parameters with separator
+    combined_input = FLAG_SEPARATOR.join([challenge_id, user_id, instance_data])
 
     # Generate HMAC-SHA256 hash using secret key
     mac = hmac.new(
-        secret_key.encode('utf-8'),
-        combined_input.encode('utf-8'),
+        secret_key.encode(ENCODING),
+        combined_input.encode(ENCODING),
         hashlib.sha256
     )
 
-    # Take first 16 characters of hex digest for readability
-    hex_hash = mac.hexdigest()[:16]
+    # Take first N characters of hex digest for readability
+    hex_hash = mac.hexdigest()[:FLAG_HEX_LENGTH]
 
     # Format as CTF flag
-    return f"flag{{{hex_hash}}}"
+    return f"{FLAG_PREFIX}{{{hex_hash}}}"
 
 
 def validate_flag(flag: str, challenge_id: str, user_id: str, instance_data: str, secret_key: str) -> bool:
@@ -147,15 +172,19 @@ def validate_flag(flag: str, challenge_id: str, user_id: str, instance_data: str
         >>> print(is_valid)
         True
     """
-    # Validate flag format: flag{16-hex-chars}
+    # Early return for invalid format (no crypto needed)
     if not _is_valid_flag_format(flag):
         return False
 
-    # Generate expected flag with same parameters
-    expected_flag = generate_unique_flag(challenge_id, user_id, instance_data, secret_key)
+    try:
+        # Generate expected flag with same parameters
+        expected_flag = generate_unique_flag(challenge_id, user_id, instance_data, secret_key)
 
-    # Use constant-time comparison to prevent timing attacks
-    return hmac.compare_digest(flag.encode('utf-8'), expected_flag.encode('utf-8'))
+        # Use constant-time comparison to prevent timing attacks
+        return hmac.compare_digest(flag.encode(ENCODING), expected_flag.encode(ENCODING))
+    except ValueError:
+        # Invalid parameters for generation
+        return False
 
 
 def _is_valid_flag_format(flag: str) -> bool:
@@ -173,6 +202,5 @@ def _is_valid_flag_format(flag: str) -> bool:
     if not isinstance(flag, str):
         return False
 
-    # Check exact format: flag{16-hex-chars}
-    pattern = r'^flag\{[0-9a-f]{16}\}$'
-    return bool(re.match(pattern, flag))
+    # Use pre-compiled regex for performance
+    return bool(FLAG_PATTERN.match(flag))
