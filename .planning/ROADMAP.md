@@ -41,9 +41,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Challenge definitions and container orchestration engine
-- [ ] 02-02-PLAN.md — Cryptographic flag generation and validation system (TDD)
-- [ ] 02-03-PLAN.md — Session management and REST API integration
+- [x] 02-01-PLAN.md — Challenge definitions and container orchestration engine
+- [x] 02-02-PLAN.md — Cryptographic flag generation and validation system (TDD)
+- [x] 02-03-PLAN.md — Session management and REST API integration
 
 **Success Criteria:**
 1. User can spawn challenge containers on-demand from the interface
@@ -57,6 +57,14 @@ Plans:
 **Dependencies:** Phase 2 (requires working challenge engine)
 
 **Requirements:** CHAL-01, CHAL-05, CHAL-06, DISC-01, DISC-02, DISC-03, DISC-04, DISC-05 (8 requirements)
+
+**Plans:** 4 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Next.js application setup with shadcn/ui and TanStack Query API integration
+- [ ] 03-02-PLAN.md — Netflix-style discovery interface with advanced filtering and challenge spawning
+- [ ] 03-03-PLAN.md — Progress tracking analytics and URL state management for shareable discovery
+- [ ] 03-04-PLAN.md — End-to-end discovery interface integration testing and verification
 
 **Success Criteria:**
 1. User can browse challenges through Netflix-style discovery interface
@@ -83,7 +91,7 @@ Plans:
 |-------|--------|--------------|------------------|------------------|
 | 1 - Foundation & Security | ✓ Complete | 8/8 mapped | 5/5 met | N/A |
 | 2 - Challenge Engine | ✓ Complete | 4/4 mapped | 4/4 met | ✓ Phase 1 |
-| 3 - Discovery Interface | Pending | 8/8 mapped | 5 defined | ✓ Phase 2 |
+| 3 - Discovery Interface | Planned | 8/8 mapped | 5 defined | ✓ Phase 2 |
 | 4 - Polish & Enhancement | Pending | 3/3 mapped | 3 defined | Phase 3 |
 
 **Total Coverage:** 23/23 requirements mapped (includes v1 requirements only)
