@@ -83,7 +83,7 @@ export function useDiscoveryFilters() {
     difficulty,
     completion_status: completionStatus,
     tags,
-    sort_by: sortBy,
+    sort_by: sortBy as 'name' | 'difficulty' | 'points' | 'estimated_time' | 'category',
     sort_order: sortOrder as 'asc' | 'desc',
   }), [search, category, difficulty, completionStatus, tags, sortBy, sortOrder]);
 

@@ -106,6 +106,9 @@ start_server() {
     # Set flag secret key (in production, use a secure random key)
     export FLAG_SECRET_KEY="${FLAG_SECRET_KEY:-$(openssl rand -hex 32)}"
 
+    # Set Python path to include project root for engine module imports
+    export PYTHONPATH="$PROJECT_DIR:${PYTHONPATH:-}"
+
     # Change to API directory
     cd "$API_DIR"
 
