@@ -9,7 +9,7 @@ set -uo pipefail
 # Configuration
 TEST_IMAGE="alpine:latest"
 TEST_CONTAINER_NAME="security-test-$$"
-SECURITY_PROFILE="/home/mark/sec-prac/security/container-profiles.json"
+SECURITY_PROFILE="/home/mark/dvc/security/container-profiles.json"
 
 # Colors for output
 RED='\033[0;31m'
@@ -342,7 +342,7 @@ display_summary() {
 # Main function
 main() {
     echo -e "${BOLD}${BLUE}Container Security Validation Test Suite${NC}"
-    echo -e "${BLUE}Testing security measures for cybersecurity training platform${NC}\n"
+    echo -e "${BLUE}Testing security measures for Damn Vulnerable Containers platform${NC}\n"
 
     # Setup
     check_runtime

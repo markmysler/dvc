@@ -1,6 +1,6 @@
-# Cybersecurity Training Platform
+# Damn Vulnerable Containers
 
-A local web portal for browsing and practicing cybersecurity challenges in containerized environments. Users can discover challenges like a streaming service, spawn vulnerable containers on-demand, exploit vulnerabilities to find flags, and track their progress - all running locally without user management.
+A local web portal for browsing and practicing security challenges in containerized environments. Users can discover challenges like a streaming service, spawn vulnerable containers on-demand, exploit vulnerabilities to find flags, and track their progress - all running locally without user management.
 
 ## Core Value
 

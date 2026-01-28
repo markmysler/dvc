@@ -512,7 +512,7 @@ display_summary() {
 
 # Main execution
 main() {
-    echo -e "${BLUE}Cybersecurity Training Platform - Verification${NC}"
+    echo -e "${BLUE}Damn Vulnerable Containers - Verification${NC}"
     echo "=============================================="
     echo
 

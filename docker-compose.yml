@@ -1,10 +1,10 @@
 services:
-  # Cybersecurity Training Platform API
+  # Damn Vulnerable Containers API
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: cybersec-api
+    container_name: dvc-api
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -24,25 +24,25 @@ services:
     cap_add:
       - DAC_OVERRIDE  # For Docker socket access
 
-  # Cybersecurity Training Platform Frontend
+  # Damn Vulnerable Containers Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: cybersec-frontend
+    container_name: dvc-frontend
     restart: unless-stopped
     ports:
       - "3001:3001"  # Use 3001 to avoid conflict with Grafana
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://cybersec-api:5000
+      - NEXT_PUBLIC_API_URL=http://dvc-api:5000
     networks:
       - monitoring
     depends_on:
       - api
   prometheus:
     image: prom/prometheus:v2.50.1
-    container_name: cybersec-prometheus
+    container_name: dvc-prometheus
     restart: unless-stopped
     ports:
       - "9090:9090"
@@ -75,7 +75,7 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.1
-    container_name: cybersec-grafana
+    container_name: dvc-grafana
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -106,7 +106,7 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v1.7.0
-    container_name: cybersec-node-exporter
+    container_name: dvc-node-exporter
     restart: unless-stopped
     ports:
       - "9100:9100"
@@ -132,7 +132,7 @@ services:
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0
-    container_name: cybersec-cadvisor
+    container_name: dvc-cadvisor
     restart: unless-stopped
     ports:
       - "8080:8080"

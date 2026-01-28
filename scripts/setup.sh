@@ -263,7 +263,7 @@ run_health_checks() {
 
 # Main execution
 main() {
-    log_info "Starting Cybersecurity Training Platform setup..."
+    log_info "Starting Damn Vulnerable Containers setup..."
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "Running in DRY RUN mode - no changes will be made"

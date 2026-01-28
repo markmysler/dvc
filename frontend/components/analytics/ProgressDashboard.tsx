@@ -65,7 +65,7 @@ export function ProgressDashboard({ challenges }: ProgressDashboardProps) {
       <div className="space-y-2">
         <h2 className="text-2xl font-bold">Progress Analytics</h2>
         <p className="text-muted-foreground">
-          Track your cybersecurity learning journey and skill development
+          Track your security learning journey and skill development
         </p>
       </div>
 

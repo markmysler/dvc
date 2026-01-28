@@ -10,7 +10,7 @@
       "points": 100,
       "tags": ["xss", "web", "javascript", "injection"],
       "container_spec": {
-        "image": "sec-prac/web-basic-xss:latest",
+        "image": "dvc/web-basic-xss:latest",
         "ports": {
           "3000": null
         },

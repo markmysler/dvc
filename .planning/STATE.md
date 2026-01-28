@@ -1,4 +1,4 @@
-# Project State: Cybersecurity Training Platform
+# Project State: Damn Vulnerable Containers
 
 **Last Updated:** 2026-01-28
 **Current Phase:** 3 of 4 (Discovery Interface)
@@ -94,7 +94,7 @@
 None currently identified.
 
 ### Context for Handoffs
-- **Project type:** Local cybersecurity training platform
+- **Project type:** Local security training platform (Damn Vulnerable Containers)
 - **Architecture:** Next.js + Flask API + Docker Compose, containerized deployment
 - **Security priority:** Container isolation critical for safe vulnerability practice
 - **UX goal:** Netflix-like discovery interface for challenge browsing

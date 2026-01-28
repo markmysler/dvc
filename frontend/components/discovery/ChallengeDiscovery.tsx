@@ -239,9 +239,9 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Cybersecurity Training Platform</h1>
+            <h1 className="text-3xl font-bold">Damn Vulnerable Containers</h1>
             <p className="text-muted-foreground">
-              Discover challenges, track progress, and develop cybersecurity skills
+              Discover challenges, track progress, and develop security skills
             </p>
           </div>
 

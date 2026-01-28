@@ -1,7 +1,7 @@
 """
 Flask REST API application factory.
 
-Provides HTTP interface for cybersecurity challenge platform with proper
+Provides HTTP interface for Damn Vulnerable Containers platform with proper
 error handling, CORS support, and security considerations.
 
 Endpoints:
@@ -196,7 +196,7 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
             JSON response with API metadata
         """
         return jsonify({
-            'name': 'Cybersecurity Training Platform API',
+            'name': 'Damn Vulnerable Containers API',
             'version': '1.0.0',
             'description': 'REST API for challenge lifecycle management and flag validation',
             'endpoints': {
@@ -204,7 +204,7 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
                 'flags': '/api/flags',
                 'health': '/api/health'
             },
-            'documentation': 'https://github.com/your-org/sec-prac'
+            'documentation': 'https://github.com/your-org/dvc'
         })
 
     # Register blueprints

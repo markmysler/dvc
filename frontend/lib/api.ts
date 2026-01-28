@@ -1,5 +1,5 @@
 /**
- * API client for the Cybersecurity Training Platform backend
+ * API client for the Damn Vulnerable Containers backend
  *
  * Provides typed functions to interact with the Flask API at localhost:5000
  * All functions include proper error handling and JSON serialization

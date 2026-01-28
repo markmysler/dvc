@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cybersecurity Training Platform",
+  title: "Damn Vulnerable Containers",
   description: "Practice real vulnerability exploitation on isolated, disposable containers with auto-generated flags",
-  keywords: ["cybersecurity", "training", "hacking", "pentesting", "vulnerability", "containers"],
+  keywords: ["security", "training", "hacking", "pentesting", "vulnerability", "containers", "dvc"],
 };
 
 export default function RootLayout({
@@ -35,7 +35,7 @@ export default function RootLayout({
               <div className="container mx-auto px-4 py-4">
                 <nav className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <h1 className="text-xl font-semibold">CyberSec Training</h1>
+                    <h1 className="text-xl font-semibold">Damn Vulnerable Containers</h1>
                     <span className="text-sm text-muted-foreground">v3.0</span>
                   </div>
                   <div className="flex items-center space-x-4">
@@ -51,7 +51,7 @@ export default function RootLayout({
             </main>
             <footer className="border-t py-4">
               <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-                Cybersecurity Training Platform - Local Deployment
+                Damn Vulnerable Containers - Local Deployment
               </div>
             </footer>
           </div>

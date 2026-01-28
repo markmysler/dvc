@@ -771,7 +771,7 @@
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
-    "cybersecurity",
+    "dvc",
     "containers",
     "monitoring",
     "system"
@@ -785,7 +785,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Cybersecurity Training Platform - Container Monitoring",
+  "title": "Damn Vulnerable Containers - Container Monitoring",
   "uid": "containers-dashboard",
   "version": 1,
   "weekStart": ""

@@ -165,8 +165,8 @@ build_challenge_images() {
 
         log_info "Building challenge: $challenge_name"
 
-        if $CONTAINER_RUNTIME build "$challenge_dir" -t "sec-prac/$challenge_name:latest"; then
-            log_info "Successfully built: sec-prac/$challenge_name:latest"
+        if $CONTAINER_RUNTIME build "$challenge_dir" -t "dvc/$challenge_name:latest"; then
+            log_info "Successfully built: dvc/$challenge_name:latest"
             ((built_count++))
         else
             log_error "Failed to build challenge: $challenge_name"
@@ -240,7 +240,7 @@ generate_summary() {
     echo ""
     echo "$(blue "Integration:")"
     echo "  docker compose up -d                          # Start all services"
-    echo "  docker ps --filter label=sec-prac.challenge.id  # View challenge containers"
+    echo "  docker ps --filter label=dvc.challenge.id  # View challenge containers"
     echo ""
 }
 

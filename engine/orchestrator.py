@@ -311,13 +311,13 @@ class ChallengeOrchestrator:
 
             # Add challenge-specific labels for tracking
             labels = {
-                'sec-prac.challenge.id': challenge_id,
-                'sec-prac.challenge.user': user_id,
-                'sec-prac.challenge.session': session_id,
-                'sec-prac.challenge.started': str(int(time.time())),
-                'sec-prac.challenge.timeout': str(session_timeout),
-                'sec-prac.challenge.name': challenge['name'],
-                'sec-prac.challenge.category': challenge['category']
+                'dvc.challenge.id': challenge_id,
+                'dvc.challenge.user': user_id,
+                'dvc.challenge.session': session_id,
+                'dvc.challenge.started': str(int(time.time())),
+                'dvc.challenge.timeout': str(session_timeout),
+                'dvc.challenge.name': challenge['name'],
+                'dvc.challenge.category': challenge['category']
             }
 
             logger.info(f"Spawning challenge {challenge_id} for user {user_id}")
@@ -376,11 +376,11 @@ class ChallengeOrchestrator:
 
             # Verify this is a challenge container
             labels = container.attrs.get('Config', {}).get('Labels', {})
-            if not labels.get('sec-prac.challenge.id'):
+            if not labels.get('dvc.challenge.id'):
                 raise ChallengeError(f"Container {container_id} is not a challenge container")
 
-            challenge_id = labels['sec-prac.challenge.id']
-            user_id = labels.get('sec-prac.challenge.user', 'unknown')
+            challenge_id = labels['dvc.challenge.id']
+            user_id = labels.get('dvc.challenge.user', 'unknown')
 
             logger.info(f"Stopping challenge {challenge_id} container {container_id}")
 
@@ -423,9 +423,9 @@ class ChallengeOrchestrator:
         """
         try:
             # Get all containers with challenge labels
-            filters = {'label': 'sec-prac.challenge.id'}
+            filters = {'label': 'dvc.challenge.id'}
             if user_id:
-                filters['label'] = f'sec-prac.challenge.user={user_id}'
+                filters['label'] = f'dvc.challenge.user={user_id}'
 
             containers = self.docker_client.containers.list(
                 filters=filters,
@@ -439,12 +439,12 @@ class ChallengeOrchestrator:
                 challenge_info = {
                     'container_id': container.id,
                     'container_name': container.name,
-                    'challenge_id': labels.get('sec-prac.challenge.id'),
-                    'challenge_name': labels.get('sec-prac.challenge.name'),
-                    'category': labels.get('sec-prac.challenge.category'),
-                    'user_id': labels.get('sec-prac.challenge.user'),
-                    'session_id': labels.get('sec-prac.challenge.session'),
-                    'started_at': labels.get('sec-prac.challenge.started'),
+                    'challenge_id': labels.get('dvc.challenge.id'),
+                    'challenge_name': labels.get('dvc.challenge.name'),
+                    'category': labels.get('dvc.challenge.category'),
+                    'user_id': labels.get('dvc.challenge.user'),
+                    'session_id': labels.get('dvc.challenge.session'),
+                    'started_at': labels.get('dvc.challenge.started'),
                     'status': container.status,
                     'ports': self._extract_port_info(container)
                 }
@@ -483,15 +483,15 @@ class ChallengeOrchestrator:
 
         try:
             # Find containers with expired timeouts
-            filters = {'label': 'sec-prac.challenge.id'}
+            filters = {'label': 'dvc.challenge.id'}
             containers = self.docker_client.containers.list(filters=filters, all=True)
 
             for container in containers:
                 labels = container.attrs.get('Config', {}).get('Labels', {})
 
                 try:
-                    started_time = int(labels.get('sec-prac.challenge.started', '0'))
-                    timeout_duration = int(labels.get('sec-prac.challenge.timeout', '3600'))
+                    started_time = int(labels.get('dvc.challenge.started', '0'))
+                    timeout_duration = int(labels.get('dvc.challenge.timeout', '3600'))
 
                     if current_time > (started_time + timeout_duration):
                         logger.info(f"Cleaning up expired container: {container.id}")
@@ -524,8 +524,8 @@ class ChallengeOrchestrator:
             # Get running challenge container for this user/challenge
             filters = {
                 'label': [
-                    f'sec-prac.challenge.id={challenge_id}',
-                    f'sec-prac.challenge.user={user_id}'
+                    f'dvc.challenge.id={challenge_id}',
+                    f'dvc.challenge.user={user_id}'
                 ]
             }
 
@@ -540,8 +540,8 @@ class ChallengeOrchestrator:
             labels = container.attrs.get('Config', {}).get('Labels', {})
 
             # Reconstruct instance data from container labels
-            session_id = labels.get('sec-prac.challenge.session')
-            started_time = labels.get('sec-prac.challenge.started')
+            session_id = labels.get('dvc.challenge.session')
+            started_time = labels.get('dvc.challenge.started')
 
             if not session_id or not started_time:
                 logger.error(f"Missing session data in container labels")

@@ -2,7 +2,7 @@
 #
 # Container Resource Cleanup Script
 # Automatically manages container lifecycle and resource usage
-# Part of the cybersecurity training platform security infrastructure
+# Part of the Damn Vulnerable Containers security infrastructure
 #
 
 set -euo pipefail

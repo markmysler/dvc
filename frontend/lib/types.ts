@@ -1,5 +1,5 @@
 /**
- * Type definitions for the Cybersecurity Training Platform
+ * Type definitions for the Damn Vulnerable Containers platform
  *
  * Provides TypeScript interfaces for all data structures used in the application:
  * - Challenge definitions and metadata

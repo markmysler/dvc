@@ -1,5 +1,5 @@
 # Security Hardening Configuration
-# Enforces container security measures for cybersecurity training platform
+# Enforces container security measures for Damn Vulnerable Containers platform
 
 # SELinux/AppArmor Configuration
 security_modules:

@@ -1,4 +1,4 @@
-# Roadmap: Cybersecurity Training Platform
+# Roadmap: Damn Vulnerable Containers
 
 **Created:** 2026-01-27
 **Phases:** 4
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Transform cybersecurity learning through a local platform that provides safe, hands-on practice with real vulnerabilities. Each phase delivers a complete, verifiable capability building toward a Netflix-like discovery interface for containerized security challenges.
+Transform security learning through a local platform that provides safe, hands-on practice with real vulnerabilities. Each phase delivers a complete, verifiable capability building toward a Netflix-like discovery interface for containerized security challenges.
 
 ## Phase Structure
 

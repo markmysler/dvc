@@ -1,4 +1,4 @@
-# Requirements: Cybersecurity Training Platform
+# Requirements: Damn Vulnerable Containers
 
 **Defined:** 2026-01-27
 **Core Value:** Users can safely practice real vulnerability exploitation on isolated, disposable containers with auto-generated flags and clean reset between attempts.
