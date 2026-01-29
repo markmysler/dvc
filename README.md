@@ -2,6 +2,9 @@
 
 A self-hosted cybersecurity training platform where you practice offensive security techniques against intentionally vulnerable applications running in isolated Docker containers. Browse challenges Netflix-style, spawn containers on-demand, capture flags through exploitation, and track your progress—all running locally with zero cloud dependencies.
 
+![Challenge Discovery Interface](docs/images/dashboard-overview.png)
+*Netflix-style challenge browser with filtering and progress tracking*
+
 ## What This Is
 
 DVC is a complete CTF (Capture The Flag) platform that runs entirely on your local machine:
@@ -12,6 +15,9 @@ DVC is a complete CTF (Capture The Flag) platform that runs entirely on your loc
 - **Zero Infrastructure**: No databases, no authentication, no cloud services—just Docker and local files
 
 Each challenge is a self-contained Docker container with a vulnerability to exploit. Flags are unique per instance using HMAC-SHA256, preventing sharing between users while enabling local-first architecture.
+
+![Challenge Detail Modal](docs/images/challenge-modal.png)
+*Challenge detail view with hints, learning objectives, and flag submission*
 
 ## Architecture
 
