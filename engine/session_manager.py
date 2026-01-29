@@ -52,6 +52,7 @@ class SessionInfo:
     expires_at: float  # Unix timestamp
     instance_data: Optional[str] = None  # Unique instance data for flag generation
     status: str = "active"  # active, expired, stopped
+    health_status: str = "unknown"  # unknown, healthy, unhealthy, starting, none
 
 
 class SessionManagerError(Exception):
@@ -298,6 +299,67 @@ class SessionManager:
 
             return active_sessions
 
+    def update_session_health(self, session_id: str, health_status: str) -> bool:
+        """
+        Update health status for specific session.
+
+        Args:
+            session_id: Session identifier
+            health_status: New health status (healthy, unhealthy, starting, none, unknown)
+
+        Returns:
+            True if session was found and updated, False otherwise
+        """
+        with self._lock:
+            session_info = self._sessions.get(session_id)
+            if not session_info:
+                logger.warning(f"Session not found for health update: {session_id}")
+                return False
+
+            try:
+                # Validate health status
+                valid_statuses = ['healthy', 'unhealthy', 'starting', 'none', 'unknown']
+                if health_status not in valid_statuses:
+                    logger.warning(f"Invalid health status '{health_status}', using 'unknown'")
+                    health_status = 'unknown'
+
+                # Update health status
+                old_status = session_info.health_status
+                session_info.health_status = health_status
+
+                # Log status changes for debugging
+                if old_status != health_status:
+                    logger.debug(
+                        f"Session {session_id} health: {old_status} -> {health_status} "
+                        f"(challenge: {session_info.challenge_id})"
+                    )
+
+                return True
+
+            except Exception as e:
+                logger.error(f"Error updating session health for {session_id}: {e}")
+                return False
+
+    def update_session_health_by_container(self, container_id: str, health_status: str) -> bool:
+        """
+        Update health status for session by container ID.
+
+        Args:
+            container_id: Container identifier
+            health_status: New health status
+
+        Returns:
+            True if session was found and updated, False otherwise
+        """
+        with self._lock:
+            # Find session by container ID
+            for session_info in self._sessions.values():
+                if session_info.container_id == container_id:
+                    return self.update_session_health(session_info.session_id, health_status)
+
+            logger.warning(f"No session found for container {container_id}")
+            return False
+
     def cleanup_expired_sessions(self) -> int:
         """
         Remove sessions older than their timeout period.
@@ -424,3 +486,13 @@ def get_session(user_id: str, challenge_id: str) -> Optional[Dict[str, Any]]:
 def cleanup_session(session_id: str) -> bool:
     """Cleanup session using global session manager"""
     return get_session_manager().cleanup_session(session_id)
+
+
+def update_session_health(session_id: str, health_status: str) -> bool:
+    """Update session health using global session manager"""
+    return get_session_manager().update_session_health(session_id, health_status)
+
+
+def update_session_health_by_container(container_id: str, health_status: str) -> bool:
+    """Update session health by container ID using global session manager"""
+    return get_session_manager().update_session_health_by_container(container_id, health_status)
