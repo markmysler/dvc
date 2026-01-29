@@ -8,8 +8,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ChallengeCard } from "./ChallengeCard"
 import { ChallengeTable } from "./ChallengeTable"
 import { Download, Trash2, FileDown, Info, Package, Globe } from "lucide-react"
-import challengeStore, { getChallenges, getImportStats, isImported, removeImportedChallenge } from "@/lib/challenge-store"
+import challengeStore, { getChallenges, getImportStats, getImportedChallenges, isImported, removeImportedChallenge } from "@/lib/challenge-store"
 import { cn } from "@/lib/utils"
+
+interface ImportStats {
+  totalBuiltIn: number
+  totalImported: number
+  categories: Record<string, { builtIn: number; imported: number }>
+  importSources: string[]
+}
 
 interface ChallengeListProps {
   challenges: any[]
@@ -33,26 +40,39 @@ export function ChallengeList({
   className
 }: ChallengeListProps) {
   const [showImportStats, setShowImportStats] = React.useState(false)
+  const [refreshKey, setRefreshKey] = React.useState(0)
 
-  // Set built-in challenges in store and get unified list
+  // Set built-in challenges in store for import management
   React.useEffect(() => {
     if (builtInChallenges.length > 0) {
       challengeStore.setBuiltInChallenges(builtInChallenges)
     }
   }, [builtInChallenges])
 
-  // Get unified challenges from store
-  const allChallenges = getChallenges()
-  const importStats = getImportStats()
+  // Get imported challenges and merge with filtered built-in challenges
+  const allChallenges = React.useMemo(() => {
+    const importedChallenges = getImportedChallenges()
+    // Merge built-in (already filtered from parent) with imported challenges
+    return [...builtInChallenges, ...importedChallenges].sort((a, b) => {
+      // Sort by imported status (built-in first) then by name
+      if (a.imported !== b.imported) {
+        return a.imported ? 1 : -1
+      }
+      return a.name.localeCompare(b.name)
+    })
+  }, [builtInChallenges, refreshKey])
+  
+  const importStats = getImportStats() as ImportStats
 
   const handleRemoveImported = (challengeId: string) => {
     if (confirm('Are you sure you want to remove this imported challenge?')) {
       try {
         removeImportedChallenge(challengeId)
-        // Force re-render by updating state
-        setShowImportStats(!showImportStats)
+        // Force re-render by updating refresh key
+        setRefreshKey(prev => prev + 1)
       } catch (error) {
-        alert('Failed to remove challenge: ' + error.message)
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        alert('Failed to remove challenge: ' + message)
       }
     }
   }
@@ -70,7 +90,8 @@ export function ChallengeList({
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (error) {
-      alert('Failed to export challenges: ' + error.message)
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      alert('Failed to export challenges: ' + message)
     }
   }
 

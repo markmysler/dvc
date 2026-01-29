@@ -135,7 +135,7 @@ export function ImportWizard({
           {/* Progress Bar */}
           <div className="pt-4">
             <ProgressIndicator
-              value={(currentStep + 1) * 33.33}
+              value={currentStep * 33.33}
               max={100}
               showPercentage
               label="Import Progress"
@@ -279,7 +279,7 @@ export function ImportWizard({
                   Complete Import
                 </Button>
               </div>
-            </div>
+            </CardContent>
           </Card>
         )}
       </div>

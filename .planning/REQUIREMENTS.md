@@ -83,8 +83,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAL-05 | Phase 3 | Complete |
 | CHAL-06 | Phase 3 | Complete |
 | CHAL-07 | Phase 2 | Complete |
-| CHAL-08 | Phase 1 | Pending |
-| CHAL-09 | Phase 1 | Pending |
+| CHAL-08 | Phase 1 | Complete |
+| CHAL-09 | Phase 1 | Complete |
 | DISC-01 | Phase 3 | Complete |
 | DISC-02 | Phase 3 | Complete |
 | DISC-03 | Phase 3 | Complete |

@@ -293,7 +293,7 @@ export function ChallengeDetailModal({
                   <Button
                     onClick={handleSpawn}
                     disabled={spawnMutation.isPending}
-                    className="w-full"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
                   >
                     <Play className="h-4 w-4 mr-2" />
                     {spawnMutation.isPending ? 'Spawning...' : 'Start Challenge'}

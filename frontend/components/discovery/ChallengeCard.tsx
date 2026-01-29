@@ -94,7 +94,7 @@ export function ChallengeCard({
 
   return (
     <Card className="relative group hover:shadow-md transition-shadow cursor-pointer">
-      <CardHeader className="pb-3" onClick={() => onViewDetails(challenge.id)}>
+      <CardHeader className="pb-3 pt-8" onClick={() => onViewDetails(challenge.id)}>
         {/* Progress indicator */}
         {progress && (
           <div className="absolute top-3 right-3">
@@ -103,7 +103,7 @@ export function ChallengeCard({
         )}
 
         {/* Title and difficulty */}
-        <div className="space-y-2">
+        <div className="space-y-2 my-2">
           <div className="flex items-start justify-between">
             <CardTitle className="text-lg leading-tight">{challenge.name}</CardTitle>
             <Badge variant={getDifficultyVariant(challenge.difficulty)} className="ml-2">
@@ -156,7 +156,7 @@ export function ChallengeCard({
         <div className="flex items-center gap-2 mt-4">
           <Button
             size="sm"
-            className="flex-1"
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
             onClick={() => onSpawn(challenge.id)}
             disabled={isSpawning}
           >

@@ -41,7 +41,7 @@ export default function RootLayout({
                   <div className="flex items-center space-x-4">
                     <a
                       href="/import"
-                      className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                      className="px-4 py-2 bg-black text-white hover:bg-gray-800 font-medium transition-colors rounded-md text-sm dark:bg-white dark:text-black dark:hover:bg-gray-200"
                     >
                       Import Challenge
                     </a>

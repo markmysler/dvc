@@ -26,6 +26,11 @@ class ChallengeStore {
    * @returns {Array} Array of imported challenges
    */
   loadImportedChallenges() {
+    // Check if running in browser environment
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.IMPORTED_CHALLENGES);
       if (!stored) return [];
@@ -50,6 +55,12 @@ class ChallengeStore {
    * @param {Array} challenges - Array of challenges to save
    */
   saveImportedChallenges(challenges) {
+    // Check if running in browser environment
+    if (typeof window === 'undefined') {
+      console.warn('Cannot save to localStorage during SSR');
+      return;
+    }
+
     try {
       localStorage.setItem(STORAGE_KEYS.IMPORTED_CHALLENGES, JSON.stringify(challenges));
 

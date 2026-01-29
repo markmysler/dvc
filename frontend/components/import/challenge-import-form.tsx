@@ -148,7 +148,7 @@ export function ChallengeImportForm({
   }
 
   return (
-    <Card className={cn("w-full max-w-2xl", className)}>
+    <Card className={cn("w-full", className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="w-5 h-5" />
