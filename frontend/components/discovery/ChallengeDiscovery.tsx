@@ -26,7 +26,7 @@ import { useChallenges, useSpawnChallenge, useRunningChallenges, useStopChalleng
 import { useDiscoveryFilters, useViewMode, useModalState } from '@/hooks/useFilters';
 import { useProgress } from '@/hooks/useProgress';
 import { type Challenge } from '@/lib/types';
-import { Grid, List, AlertCircle, Loader2, BarChart3, Target } from 'lucide-react';
+import { Grid, List, AlertCircle, Loader2, BarChart3, Target, Award, Flame } from 'lucide-react';
 
 interface ChallengeDiscoveryProps {
   initialData?: any;
@@ -70,6 +70,45 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
     }
     return [];
   }, [challengesData, initialData]);
+  
+  // Calculate stats for header display (must be after challenges is defined)
+  const userStats = useMemo(() => {
+    const completedChallenges = Object.values(progressData).filter(p => p.completed);
+    const totalPoints = completedChallenges.reduce((sum, p) => {
+      const challenge = challenges.find(c => c.id === p.challengeId);
+      return sum + (challenge?.points || 0);
+    }, 0);
+    
+    // Calculate streak
+    const activityDates = [...new Set(
+      Object.values(progressData).map(p => p.lastAttemptAt.split('T')[0])
+    )].sort().reverse();
+    
+    let streakDays = 0;
+    if (activityDates.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      if (activityDates[0] === today || activityDates[0] === yesterday) {
+        streakDays = 1;
+        let currentDate = activityDates[0] === today ? today : yesterday;
+        
+        for (let i = 1; i < activityDates.length; i++) {
+          const prevDate = new Date(Date.parse(currentDate) - 24 * 60 * 60 * 1000);
+          const expectedDate = prevDate.toISOString().split('T')[0];
+          
+          if (activityDates[i] === expectedDate) {
+            streakDays++;
+            currentDate = expectedDate;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+    
+    return { totalPoints, streakDays };
+  }, [progressData, challenges]);
 
   // Filter and search challenges with completion status
   const filteredChallenges = useMemo(() => {
@@ -267,27 +306,52 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
             </p>
           </div>
 
-          {activeTab === 'discovery' && (
-            /* View mode toggle - only show in discovery tab */
-            <div className="flex items-center gap-2">
-              <Button
-                variant={view === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={toggleView}
-              >
-                <Grid className="h-4 w-4 mr-1" />
-                Grid
-              </Button>
-              <Button
-                variant={view === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={toggleView}
-              >
-                <List className="h-4 w-4 mr-1" />
-                Table
-              </Button>
+          <div className="flex items-center gap-4">
+            {/* User Stats */}
+            <div className="flex items-center gap-4 mr-4">
+              {userStats.totalPoints > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500 dark:bg-yellow-600 rounded-lg">
+                  <Award className="h-5 w-5 text-white" />
+                  <div className="text-sm">
+                    <div className="font-bold text-white">{userStats.totalPoints}</div>
+                    <div className="text-xs text-yellow-50">points</div>
+                  </div>
+                </div>
+              )}
+              
+              {userStats.streakDays > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-orange-500 dark:bg-orange-600 rounded-lg">
+                  <Flame className="h-5 w-5 text-white" />
+                  <div className="text-sm">
+                    <div className="font-bold text-white">{userStats.streakDays}</div>
+                    <div className="text-xs text-orange-50">day{userStats.streakDays !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+
+            {activeTab === 'discovery' && (
+              /* View mode toggle - only show in discovery tab */
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={view === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={toggleView}
+                >
+                  <Grid className="h-4 w-4 mr-1" />
+                  Grid
+                </Button>
+                <Button
+                  variant={view === 'table' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={toggleView}
+                >
+                  <List className="h-4 w-4 mr-1" />
+                  Table
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Main Navigation Tabs */}

@@ -32,6 +32,7 @@ export interface ProgressStats {
   totalTimeSpent: number;
   averageTimePerChallenge: number;
   successRate: number;
+  totalPoints: number;
   categoriesCompleted: Record<string, number>;
   difficultiesCompleted: Record<string, number>;
   streakDays: number;
@@ -244,6 +245,7 @@ export function useProgressStats(challenges: Challenge[]) {
         totalTimeSpent: 0,
         averageTimePerChallenge: 0,
         successRate: 0,
+        totalPoints: 0,
         categoriesCompleted: {},
         difficultiesCompleted: {},
         streakDays: 0,
@@ -260,6 +262,12 @@ export function useProgressStats(challenges: Challenge[]) {
     const totalTimeSpent = progressEntries.reduce((sum, p) => sum + p.timeSpent, 0);
     const averageTimePerChallenge = completedChallenges > 0 ? totalTimeSpent / completedChallenges : 0;
     const successRate = totalChallenges > 0 ? completedChallenges / totalChallenges : 0;
+
+    // Calculate total points earned
+    const totalPoints = completedEntries.reduce((sum, p) => {
+      const challenge = challenges.find(c => c.id === p.challengeId);
+      return sum + (challenge?.points || 0);
+    }, 0);
 
     // Category progress
     const categoriesCompleted: Record<string, number> = {};
@@ -300,6 +308,7 @@ export function useProgressStats(challenges: Challenge[]) {
       totalTimeSpent,
       averageTimePerChallenge,
       successRate,
+      totalPoints,
       categoriesCompleted,
       difficultiesCompleted,
       streakDays,
