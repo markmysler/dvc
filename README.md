@@ -73,7 +73,7 @@ The easiest way to start DVC is using the provided startup script:
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/markmysler/dvc.git
 cd dvc
 
 # Start with API and Frontend only (recommended for development)
@@ -529,4 +529,4 @@ Educational use only. Not for production security training.
 
 ---
 
-**Local-First** • **Privacy-Preserving** • **Production-Ready**
+**Local-First** • **Privacy-Preserving**
