@@ -51,11 +51,8 @@
     {
       "category": "web",
       "container_spec": {
-        "environment": {
-          "FLAG": "FLAG{test_challenge_flag_12345}",
-          "FLASK_ENV": "challenge"
-        },
-        "image": "dvc/test-challenge:latest",
+        "environment": {},
+        "image": "sec-prac/path-traversal:latest",
         "ports": {
           "5000": null
         },
@@ -66,34 +63,32 @@
         },
         "security_profile": "challenge"
       },
-      "description": "A test challenge for validating the import and challenge system",
+      "description": "Exploit a path traversal vulnerability to access files outside the intended directory. Learn about directory traversal attacks and how to identify insecure file handling.",
       "difficulty": "beginner",
-      "id": "test-challenge",
+      "id": "web-path-traversal",
       "metadata": {
-        "author": "DVC Team",
+        "author": "Security Practice Platform",
         "created": "2026-01-29",
-        "estimated_time": "15-30 minutes",
+        "estimated_time": "20-30 minutes",
         "hints": [
-          "This is a test challenge",
-          "Check the application endpoints"
+          "The application allows viewing files, but doesn't properly validate paths",
+          "Try using '../' sequences to navigate up directories",
+          "The flag is stored in a file at /app/flag.txt"
         ],
         "learning_objectives": [
-          "Test the challenge import system",
-          "Validate container deployment"
+          "Understand path traversal vulnerabilities",
+          "Learn directory navigation techniques",
+          "Practice exploiting insecure file access controls"
         ],
-        "migration": {
-          "migrated_at": "2026-01-29T10:23:00.593206",
-          "migrated_from": "challenges/test-challenge/config.json",
-          "migration_tool": "migrate-configs.py"
-        },
         "version": "1.0"
       },
-      "name": "Test Challenge",
-      "points": 50,
+      "name": "Path Traversal Challenge",
+      "points": 150,
       "tags": [
-        "test",
+        "path-traversal",
         "web",
-        "python"
+        "file-inclusion",
+        "directory-traversal"
       ]
     }
   ],

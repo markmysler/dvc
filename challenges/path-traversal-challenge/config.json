@@ -1,0 +1,55 @@
+{
+  "id": "web-path-traversal",
+  "name": "Path Traversal File Server",
+  "description": "A file server with a path traversal vulnerability. Learn to exploit directory traversal flaws to access sensitive files outside the intended directory.",
+  "difficulty": "beginner",
+  "category": "web",
+  "points": 150,
+  "tags": ["path-traversal", "web", "file-system", "directory-traversal"],
+  "container_spec": {
+    "image": "dvc/web-path-traversal:latest",
+    "ports": {
+      "5000": null
+    },
+    "environment": {
+      "FLASK_ENV": "production"
+    },
+    "resource_limits": {
+      "memory": "256m",
+      "cpus": "0.5",
+      "pids_limit": 128
+    },
+    "security_profile": "challenge"
+  },
+  "metadata": {
+    "author": "DVC Security Team",
+    "created": "2026-01-29",
+    "version": "1.0",
+    "learning_objectives": [
+      "Understand path traversal vulnerabilities",
+      "Learn to manipulate file paths to access restricted files",
+      "Recognize the importance of input validation for file operations",
+      "Master directory traversal techniques"
+    ],
+    "hints": [
+      "The application allows you to download files from a specific directory",
+      "Try using special characters like ../ to navigate the file system",
+      "The flag is stored in a file at the root of the filesystem",
+      "URL encode your payload if special characters don't work"
+    ],
+    "solution_steps": [
+      "Access the file server homepage to see available files",
+      "Notice the download functionality uses a 'file' parameter",
+      "Try accessing /download?file=../flag.txt to go up one directory",
+      "If that doesn't work, try /download?file=../../flag.txt",
+      "Continue adding ../ sequences until you reach the root directory",
+      "The flag is in /flag.txt, so use: /download?file=../../../flag.txt"
+    ],
+    "estimated_time": "20-30 minutes",
+    "prerequisites": [
+      "Basic understanding of web requests",
+      "Familiarity with file system paths",
+      "Knowledge of HTTP parameters"
+    ]
+  }
+}
