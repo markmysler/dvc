@@ -21,22 +21,32 @@ import {
   type OnSpawnChallenge,
   type OnViewDetails
 } from '@/lib/types';
-import { Clock, Play, Star, Tag, Trophy, CheckCircle, AlertCircle } from 'lucide-react';
+import { Clock, Play, Square, Star, Tag, Trophy, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface ChallengeCardProps {
   challenge: Challenge;
   progress?: UserProgress;
   onSpawn: OnSpawnChallenge;
+  onStop: (sessionId: string) => void;
   onViewDetails: OnViewDetails;
   isSpawning?: boolean;
+  spawningChallengeId?: string;
+  isStopping?: boolean;
+  isRunning?: boolean;
+  sessionId?: string;
 }
 
 export function ChallengeCard({
   challenge,
   progress,
   onSpawn,
+  onStop,
   onViewDetails,
-  isSpawning = false
+  isSpawning = false,
+  spawningChallengeId,
+  isStopping = false,
+  isRunning = false,
+  sessionId
 }: ChallengeCardProps) {
   const difficultyConfig = DIFFICULTY_LEVELS[challenge.difficulty];
 
@@ -71,11 +81,7 @@ export function ChallengeCard({
         <div className="flex items-center gap-1 text-sm text-green-600">
           <CheckCircle className="h-3 w-3" />
           <span>Completed</span>
-          {progress.best_time && progress.best_time > 0 && (
-            <span className="text-xs text-muted-foreground">
-              ({Math.floor(progress.best_time / 60)}m)
-            </span>
-          )}
+          
         </div>
       );
     }
@@ -93,7 +99,7 @@ export function ChallengeCard({
   };
 
   return (
-    <Card className="relative group hover:shadow-md transition-shadow cursor-pointer">
+    <Card className="relative group hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col justify-between">
       <CardHeader className="pb-3 pt-8" onClick={() => onViewDetails(challenge.id)}>
         {/* Progress indicator */}
         {progress && (
@@ -154,20 +160,42 @@ export function ChallengeCard({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 mt-4">
-          <Button
-            size="sm"
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-            onClick={() => onSpawn(challenge.id)}
-            disabled={isSpawning}
-          >
-            <Play className="h-4 w-4 mr-1" />
-            {isSpawning ? 'Spawning...' : 'Start Challenge'}
-          </Button>
+          {isRunning ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (sessionId) onStop(sessionId);
+              }}
+              disabled={!sessionId || isStopping}
+            >
+              <Square className="h-4 w-4 mr-1" />
+              {isStopping ? 'Stopping...' : 'Stop Challenge'}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSpawn(challenge.id);
+              }}
+              disabled={isSpawning && spawningChallengeId === challenge.id}
+            >
+              <Play className="h-4 w-4 mr-1" />
+              {isSpawning && spawningChallengeId === challenge.id ? 'Spawning...' : 'Start Challenge'}
+            </Button>
+          )}
 
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onViewDetails(challenge.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetails(challenge.id);
+            }}
           >
             Details
           </Button>

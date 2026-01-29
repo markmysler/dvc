@@ -419,6 +419,60 @@ class SessionManager:
         """Generate unique session identifier"""
         return str(uuid.uuid4())[:8]
 
+    def validate_sessions_against_containers(self, orchestrator) -> int:
+        """
+        Validate all sessions against actual running containers.
+        Remove sessions for containers that no longer exist.
+        
+        Args:
+            orchestrator: ChallengeOrchestrator instance to check container status
+            
+        Returns:
+            Number of stale sessions cleaned up
+        """
+        import docker
+        
+        try:
+            client = docker.from_env()
+            running_container_ids = {c.id for c in client.containers.list()}
+        except Exception as e:
+            logger.error(f"Failed to get running containers: {e}")
+            return 0
+        
+        cleaned_count = 0
+        
+        with self._lock:
+            stale_session_ids = []
+            
+            # Find sessions with containers that don't exist
+            for session_id, session_info in self._sessions.items():
+                if session_info.container_id not in running_container_ids:
+                    logger.warning(
+                        f"Found stale session {session_id} for non-existent container {session_info.container_id}"
+                    )
+                    stale_session_ids.append(session_id)
+            
+            # Clean up stale sessions (without trying to stop containers)
+            for session_id in stale_session_ids:
+                session_info = self._sessions.get(session_id)
+                if session_info:
+                    # Remove from user sessions
+                    user_sessions = self._user_sessions.get(session_info.user_id, [])
+                    if session_id in user_sessions:
+                        user_sessions.remove(session_id)
+                        if not user_sessions:
+                            del self._user_sessions[session_info.user_id]
+                    
+                    # Remove session
+                    del self._sessions[session_id]
+                    cleaned_count += 1
+                    logger.info(f"Cleaned up stale session {session_id}")
+        
+        if cleaned_count > 0:
+            logger.info(f"Validated sessions: removed {cleaned_count} stale session(s)")
+        
+        return cleaned_count
+
     def _auto_cleanup_session(self, session_id: str) -> None:
         """Automatic session cleanup callback"""
         try:

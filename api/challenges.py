@@ -80,6 +80,7 @@ def list_challenges():
         # Transform challenge data for API response
         challenge_list = []
         for challenge_id, challenge_data in challenges.items():
+            metadata = challenge_data.get('metadata', {})
             challenge_info = {
                 'id': challenge_id,
                 'name': challenge_data.get('name', challenge_id),
@@ -88,8 +89,12 @@ def list_challenges():
                 'description': challenge_data.get('description', ''),
                 'tags': challenge_data.get('tags', []),
                 'points': challenge_data.get('points', 0),
-                'estimated_time': challenge_data.get('estimated_time', '30 minutes'),
-                'imported': challenge_data.get('imported', False)
+                'estimated_time': metadata.get('estimated_time', '30 minutes'),
+                'imported': challenge_data.get('imported', False),
+                'hints': metadata.get('hints', []),
+                'learning_objectives': metadata.get('learning_objectives', []),
+                'author': metadata.get('author', 'Unknown'),
+                'version': metadata.get('version', '1.0')
             }
             challenge_list.append(challenge_info)
 

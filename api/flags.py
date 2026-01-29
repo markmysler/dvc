@@ -97,11 +97,36 @@ def validate_submitted_flag():
 
         if is_valid:
             response_data.update({
-                "message": "Correct flag! Challenge solved.",
+                "message": "Correct flag! Challenge solved. Container will shut down in 30 seconds.",
                 "points": session.get('points', 100),  # Default 100 points
-                "solved_at": data.get('solved_at', session['created_at'])
+                "solved_at": data.get('solved_at', session['created_at']),
+                "container_shutdown": True,
+                "shutdown_delay": 30
             })
             logger.info(f"Valid flag submission for challenge {challenge_id} by user {user_id}")
+            
+            # Stop the challenge container after successful flag submission
+            try:
+                from challenges import get_orchestrator
+                orchestrator = get_orchestrator()
+                container_id = session.get('container_id')
+                if container_id:
+                    import threading
+                    import time
+                    
+                    def delayed_shutdown():
+                        time.sleep(30)  # 30 second delay
+                        try:
+                            orchestrator.stop_challenge(container_id, user_id)
+                            logger.info(f"Automatically stopped challenge {challenge_id} container {container_id} after successful flag submission")
+                        except Exception as e:
+                            logger.error(f"Failed to auto-stop container {container_id}: {e}")
+                    
+                    # Start shutdown in background thread
+                    shutdown_thread = threading.Thread(target=delayed_shutdown, daemon=True)
+                    shutdown_thread.start()
+            except Exception as e:
+                logger.warning(f"Failed to initiate auto-shutdown for challenge {challenge_id}: {e}")
         else:
             response_data.update({
                 "message": "Incorrect flag. Try again!",

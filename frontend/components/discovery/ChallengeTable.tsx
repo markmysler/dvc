@@ -91,14 +91,6 @@ export function ChallengeTable({
     }
   }, []);
 
-  // Format estimated time display
-  const formatTime = useCallback((minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
-  }, []);
-
   // Get progress indicator
   const getProgressIndicator = useCallback((challengeId: string) => {
     const userProgress = progress[challengeId];
@@ -251,7 +243,7 @@ export function ChallengeTable({
         cell: ({ row }) => (
           <div className="flex items-center gap-1 text-muted-foreground">
             <Clock className="h-4 w-4" />
-            {formatTime(row.getValue('estimated_time'))}
+            {row.getValue('estimated_time')}
           </div>
         ),
       },
@@ -291,7 +283,7 @@ export function ChallengeTable({
                 size="sm"
                 onClick={() => onSpawn(challenge.id)}
                 disabled={isCurrentlySpawning}
-                className="h-8"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8"
               >
                 <Play className="h-3 w-3 mr-1" />
                 {isCurrentlySpawning ? 'Spawning...' : 'Start'}
@@ -313,7 +305,7 @@ export function ChallengeTable({
         size: 160,
       },
     ],
-    [onSpawn, onViewDetails, isSpawning, spawningChallengeId, getDifficultyVariant, formatTime, getProgressIndicator]
+    [onSpawn, onViewDetails, isSpawning, spawningChallengeId, getDifficultyVariant, getProgressIndicator]
   );
 
   // Create table instance

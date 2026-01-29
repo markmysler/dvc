@@ -216,6 +216,19 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     app.register_blueprint(flags.flags_bp)
     app.register_blueprint(import_handler.bp)
 
+    # Validate sessions against running containers on startup
+    try:
+        from engine.session_manager import get_session_manager
+        session_manager = get_session_manager()
+        orchestrator = challenges.get_orchestrator()
+        cleaned = session_manager.validate_sessions_against_containers(orchestrator)
+        if cleaned > 0:
+            logger.info(f"Startup health check: cleaned {cleaned} stale session(s)")
+        else:
+            logger.info("Startup health check: all sessions valid")
+    except Exception as e:
+        logger.warning(f"Startup session validation failed: {e}")
+
     # Record start time for uptime calculation
     if 'START_TIME' not in app.config:
         app.config['START_TIME'] = time.time()

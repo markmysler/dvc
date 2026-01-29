@@ -22,7 +22,7 @@ import { ChallengeFilters } from './ChallengeFilters';
 import { ChallengeList } from './challenge-list';
 import { ChallengeDetailModal } from './ChallengeDetailModal';
 import { ProgressDashboard } from '../analytics/ProgressDashboard';
-import { useChallenges, useSpawnChallenge, useRunningChallenges } from '@/hooks/useChallenges';
+import { useChallenges, useSpawnChallenge, useRunningChallenges, useStopChallenge } from '@/hooks/useChallenges';
 import { useDiscoveryFilters, useViewMode, useModalState } from '@/hooks/useFilters';
 import { useProgress } from '@/hooks/useProgress';
 import { type Challenge } from '@/lib/types';
@@ -37,6 +37,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
   const { data: challengesData, isLoading: isLoadingChallenges, error } = useChallenges();
   const { data: runningChallengesData } = useRunningChallenges();
   const spawnMutation = useSpawnChallenge();
+  const stopMutation = useStopChallenge();
 
   // URL state management
   const {
@@ -55,6 +56,9 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
 
   // Active tab state (could also be URL-managed)
   const [activeTab, setActiveTab] = useState('discovery');
+  
+  // Track stopping state
+  const [stoppingChallengeId, setStoppingChallengeId] = useState<string | null>(null);
 
   // Get challenges from API response
   const challenges: Challenge[] = useMemo(() => {
@@ -166,6 +170,23 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
       });
     } catch (error) {
       console.error('Failed to spawn challenge:', error);
+    }
+  };
+  
+  // Handle challenge stopping
+  const handleStopChallenge = async (sessionId: string) => {
+    try {
+      // Find the challenge ID for this session
+      const session = runningChallengesData?.challenges.find(s => s.session_id === sessionId);
+      if (session) {
+        setStoppingChallengeId(session.challenge_id);
+      }
+      
+      await stopMutation.mutateAsync(sessionId);
+    } catch (error) {
+      console.error('Failed to stop challenge:', error);
+    } finally {
+      setStoppingChallengeId(null);
     }
   };
 
@@ -312,9 +333,11 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
                 challenges={filteredChallenges}
                 view={view}
                 onSpawn={handleSpawnChallenge}
+                onStop={handleStopChallenge}
                 onViewDetails={handleViewDetails}
                 isSpawning={spawnMutation.isPending}
                 spawningChallengeId={spawnMutation.variables?.challenge_id}
+                stoppingChallengeId={stoppingChallengeId}
                 getChallengeProgress={getChallengeProgress}
               />
 

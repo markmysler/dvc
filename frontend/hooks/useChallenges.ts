@@ -81,25 +81,17 @@ export function useSpawnChallenge() {
 
   return useMutation({
     mutationFn: (data: SpawnChallengeRequest) => spawnChallenge(data),
-    onSuccess: (data: SpawnChallengeResponse) => {
-      // Invalidate and refetch running challenges
-      queryClient.invalidateQueries({ queryKey: challengeKeys.running() });
-
-      // If the spawn was successful, we can also update the cache optimistically
-      if (data.success && data.challenge_session) {
-        queryClient.setQueryData<RunningChallengesResponse>(
-          challengeKeys.running(),
-          (oldData) => {
-            if (!oldData) return oldData;
-
-            return {
-              ...oldData,
-              challenges: [...oldData.challenges, data.challenge_session!],
-              count: oldData.count + 1,
-            };
-          }
-        );
-      }
+    onSuccess: async (data: SpawnChallengeResponse) => {
+      // Invalidate and refetch running challenges immediately
+      await queryClient.invalidateQueries({ 
+        queryKey: challengeKeys.running(),
+        refetchType: 'active'
+      });
+      
+      // Force an immediate refetch to get the latest state
+      await queryClient.refetchQueries({
+        queryKey: challengeKeys.running()
+      });
     },
     onError: (error: APIError) => {
       console.error('Failed to spawn challenge:', error.message);

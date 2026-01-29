@@ -10,6 +10,7 @@ import { ChallengeTable } from "./ChallengeTable"
 import { Download, Trash2, FileDown, Info, Package, Globe } from "lucide-react"
 import challengeStore, { getChallenges, getImportStats, getImportedChallenges, isImported, removeImportedChallenge } from "@/lib/challenge-store"
 import { cn } from "@/lib/utils"
+import { useRunningChallenges } from "@/hooks/useChallenges"
 
 interface ImportStats {
   totalBuiltIn: number
@@ -22,9 +23,11 @@ interface ChallengeListProps {
   challenges: any[]
   view: 'grid' | 'table'
   onSpawn: (challengeId: string) => void
+  onStop: (sessionId: string) => void
   onViewDetails: (challengeId: string) => void
   isSpawning: boolean
   spawningChallengeId?: string
+  stoppingChallengeId?: string
   getChallengeProgress: (challengeId: string) => any
   className?: string
 }
@@ -33,14 +36,19 @@ export function ChallengeList({
   challenges: builtInChallenges,
   view,
   onSpawn,
+  onStop,
   onViewDetails,
   isSpawning,
   spawningChallengeId,
+  stoppingChallengeId,
   getChallengeProgress,
   className
 }: ChallengeListProps) {
   const [showImportStats, setShowImportStats] = React.useState(false)
   const [refreshKey, setRefreshKey] = React.useState(0)
+  
+  // Get running challenges data
+  const { data: runningChallengesData } = useRunningChallenges()
 
   // Set built-in challenges in store for import management
   React.useEffect(() => {
@@ -131,6 +139,14 @@ export function ChallengeList({
     ...challenge,
     additionalActions: getChallengeCardActions(challenge)
   }))
+  
+  // Helper to find running session for a challenge
+  const getRunningSession = React.useCallback((challengeId: string) => {
+    if (!runningChallengesData?.challenges) return null
+    return runningChallengesData.challenges.find(
+      (session) => session.challenge_id === challengeId
+    )
+  }, [runningChallengesData])
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -233,6 +249,8 @@ export function ChallengeList({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {enhancedChallenges.map((challenge) => {
             const progress = getChallengeProgress(challenge.id)
+            const runningSession = getRunningSession(challenge.id)
+            const isStopping = stoppingChallengeId === challenge.id
 
             return (
               <div key={challenge.id} className="relative">
@@ -250,8 +268,13 @@ export function ChallengeList({
                     points_earned: progress.completed ? challenge.points : 0,
                   } : undefined}
                   onSpawn={onSpawn}
+                  onStop={onStop}
                   onViewDetails={onViewDetails}
                   isSpawning={isSpawning}
+                  spawningChallengeId={spawningChallengeId}
+                  isStopping={isStopping}
+                  isRunning={!!runningSession}
+                  sessionId={runningSession?.session_id}
                 />
 
                 {/* Challenge Source Indicator */}
@@ -293,6 +316,13 @@ export function ChallengeList({
         <div className="space-y-4">
           <ChallengeTable
             challenges={enhancedChallenges}
+            progress={enhancedChallenges.reduce((acc, challenge) => {
+              const progress = getChallengeProgress(challenge.id);
+              if (progress) {
+                acc[challenge.id] = progress;
+              }
+              return acc;
+            }, {} as Record<string, any>)}
             onSpawn={onSpawn}
             onViewDetails={onViewDetails}
             isSpawning={isSpawning}
