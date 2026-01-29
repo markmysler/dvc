@@ -1,48 +1,101 @@
 {
-  "schema_version": "1.0",
   "challenges": [
     {
-      "id": "web-basic-xss",
-      "name": "Basic XSS Challenge",
-      "description": "A simple web application vulnerable to cross-site scripting (XSS) attacks. Learn to identify and exploit reflected XSS vulnerabilities.",
-      "difficulty": "beginner",
       "category": "web",
-      "points": 100,
-      "tags": ["xss", "web", "javascript", "injection"],
       "container_spec": {
-        "image": "dvc/web-basic-xss:latest",
-        "ports": {
-          "3000": null
-        },
         "environment": {
           "FLAG": "FLAG{xss_vulnerabilities_are_dangerous_83f2a1}",
           "NODE_ENV": "challenge",
           "PORT": "3000"
         },
+        "image": "dvc/web-basic-xss:latest",
+        "ports": {
+          "3000": null
+        },
         "resource_limits": {
-          "memory": "256m",
           "cpus": "0.5",
+          "memory": "256m",
           "pids_limit": 128
         },
         "security_profile": "challenge"
       },
+      "description": "A simple web application vulnerable to cross-site scripting (XSS) attacks. Learn to identify and exploit reflected XSS vulnerabilities.",
+      "difficulty": "beginner",
+      "id": "web-basic-xss",
       "metadata": {
         "author": "Security Practice Platform",
         "created": "2026-01-28",
-        "version": "1.0",
-        "learning_objectives": [
-          "Identify XSS vulnerabilities in web forms",
-          "Craft basic XSS payloads",
-          "Understand the impact of reflected XSS"
-        ],
+        "estimated_time": "15-30 minutes",
         "hints": [
           "Look for user input that is reflected back in the page without proper sanitization",
           "Try entering JavaScript code in the search form",
           "The flag is revealed when XSS successfully executes"
         ],
+        "learning_objectives": [
+          "Identify XSS vulnerabilities in web forms",
+          "Craft basic XSS payloads",
+          "Understand the impact of reflected XSS"
+        ],
         "solution_url": "/challenges/web-basic-xss/solution.md",
-        "estimated_time": "15-30 minutes"
-      }
+        "version": "1.0"
+      },
+      "name": "Basic XSS Challenge",
+      "points": 100,
+      "tags": [
+        "xss",
+        "web",
+        "javascript",
+        "injection"
+      ]
+    },
+    {
+      "category": "web",
+      "container_spec": {
+        "environment": {
+          "FLAG": "FLAG{test_challenge_flag_12345}",
+          "FLASK_ENV": "challenge"
+        },
+        "image": "dvc/test-challenge:latest",
+        "ports": {
+          "5000": null
+        },
+        "resource_limits": {
+          "cpus": "0.5",
+          "memory": "256m",
+          "pids_limit": 128
+        },
+        "security_profile": "challenge"
+      },
+      "description": "A test challenge for validating the import and challenge system",
+      "difficulty": "beginner",
+      "id": "test-challenge",
+      "metadata": {
+        "author": "DVC Team",
+        "created": "2026-01-29",
+        "estimated_time": "15-30 minutes",
+        "hints": [
+          "This is a test challenge",
+          "Check the application endpoints"
+        ],
+        "learning_objectives": [
+          "Test the challenge import system",
+          "Validate container deployment"
+        ],
+        "migration": {
+          "migrated_at": "2026-01-29T10:23:00.593206",
+          "migrated_from": "challenges/test-challenge/config.json",
+          "migration_tool": "migrate-configs.py"
+        },
+        "version": "1.0"
+      },
+      "name": "Test Challenge",
+      "points": 50,
+      "tags": [
+        "test",
+        "web",
+        "python"
+      ]
     }
-  ]
+  ],
+  "schema_version": "1.0"
 }
