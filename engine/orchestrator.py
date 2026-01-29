@@ -21,6 +21,7 @@ from docker.models.containers import Container
 from docker.errors import DockerException, APIError, ImageNotFound
 
 from .flag_system import generate_unique_flag
+from .health_monitor import HealthMonitor
 
 # Configure logging
 logging.basicConfig(
@@ -93,6 +94,9 @@ class ChallengeOrchestrator:
             logger.error(f"Unexpected error initializing Docker client: {e}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise ChallengeError(f"Docker connection failed: {e}")
+
+        # Initialize health monitoring
+        self.health_monitor = HealthMonitor(self.docker_client)
 
         # Load configurations
         self._load_challenges()
@@ -394,6 +398,10 @@ class ChallengeOrchestrator:
                 'status': 'running'
             }
 
+            # Start health monitoring for the container
+            self.health_monitor.start_monitoring(container.id)
+            logger.info(f"Started health monitoring for container {container.id}")
+
             logger.info(f"Challenge {challenge_id} spawned successfully: {container.id}")
             return container.id, instance_data
 
@@ -433,6 +441,10 @@ class ChallengeOrchestrator:
             user_id = labels.get('dvc.challenge.user', 'unknown')
 
             logger.info(f"Stopping challenge {challenge_id} container {container_id}")
+
+            # Stop health monitoring first
+            self.health_monitor.stop_monitoring(container_id)
+            logger.info(f"Stopped health monitoring for container {container_id}")
 
             # Stop container
             if force:
@@ -555,6 +567,100 @@ class ChallengeOrchestrator:
             logger.error(f"Error during cleanup: {e}")
 
         return cleaned_count
+
+    def get_container_health(self, container_id: str) -> Dict[str, Any]:
+        """
+        Get health status for specific container.
+
+        Args:
+            container_id: Container to check health for
+
+        Returns:
+            Dictionary with health information
+
+        Raises:
+            ChallengeError: If container not found or not monitored
+        """
+        try:
+            # Check if container is being monitored
+            if container_id not in self.health_monitor.get_monitored_containers():
+                return {
+                    'container_id': container_id,
+                    'status': 'not_monitored',
+                    'health': 'unknown',
+                    'message': 'Container is not being health monitored'
+                }
+
+            # Get current health status
+            health_status = self.health_monitor.get_health_status(container_id)
+
+            # Get container info from tracking
+            container_info = self.active_containers.get(container_id, {})
+
+            health_data = {
+                'container_id': container_id,
+                'status': 'monitored',
+                'health': health_status.value,
+                'challenge_id': container_info.get('challenge_id'),
+                'user_id': container_info.get('user_id'),
+                'session_id': container_info.get('session_id'),
+                'started_at': container_info.get('started_at'),
+                'monitoring_active': True
+            }
+
+            # Get additional monitoring stats if available
+            monitored_containers = self.health_monitor.get_monitored_containers()
+            if container_id in monitored_containers:
+                monitor_config = monitored_containers[container_id]
+                health_data.update({
+                    'check_interval': monitor_config.get('check_interval'),
+                    'monitoring_started': monitor_config.get('added_at')
+                })
+
+            return health_data
+
+        except Exception as e:
+            logger.error(f"Error getting container health for {container_id}: {e}")
+            raise ChallengeError(f"Failed to get container health: {e}")
+
+    def get_health_summary(self) -> Dict[str, Any]:
+        """
+        Get overall health monitoring summary.
+
+        Returns:
+            Summary of all health monitoring activities
+        """
+        try:
+            return self.health_monitor.get_health_summary()
+        except Exception as e:
+            logger.error(f"Error getting health summary: {e}")
+            return {'error': str(e)}
+
+    def shutdown(self) -> None:
+        """
+        Shutdown orchestrator and cleanup all resources.
+
+        Stops health monitoring and cleans up containers.
+        """
+        try:
+            logger.info("Shutting down challenge orchestrator...")
+
+            # Shutdown health monitoring
+            if hasattr(self, 'health_monitor'):
+                self.health_monitor.shutdown()
+                logger.info("Health monitoring shutdown complete")
+
+            # Stop all active containers
+            for container_id in list(self.active_containers.keys()):
+                try:
+                    self.stop_challenge(container_id, force=True)
+                except Exception as e:
+                    logger.warning(f"Error stopping container during shutdown: {e}")
+
+            logger.info("Challenge orchestrator shutdown complete")
+
+        except Exception as e:
+            logger.error(f"Error during orchestrator shutdown: {e}")
 
     def validate_flag(self, challenge_id: str, user_id: str, submitted_flag: str) -> bool:
         """
