@@ -22,6 +22,7 @@ from docker.errors import DockerException, APIError, ImageNotFound
 
 from .flag_system import generate_unique_flag
 from .health_monitor import HealthMonitor
+from .config_manager import ConfigManager
 
 # Configure logging
 logging.basicConfig(
@@ -57,7 +58,7 @@ class ChallengeOrchestrator:
         Initialize the challenge orchestrator
 
         Args:
-            challenges_path: Path to challenges definition file
+            challenges_path: Path to challenges definition file (for config manager)
             security_profiles_path: Path to security profiles configuration
         """
         self.challenges_path = Path(challenges_path)
@@ -65,6 +66,9 @@ class ChallengeOrchestrator:
         self.challenges: Dict[str, Dict] = {}
         self.security_profiles: Dict[str, Dict] = {}
         self.active_containers: Dict[str, Dict] = {}
+
+        # Initialize configuration manager for unified config loading
+        self.config_manager = ConfigManager(master_config_path=str(challenges_path))
 
         # Initialize Docker client with error handling
         try:
@@ -103,48 +107,32 @@ class ChallengeOrchestrator:
         self._load_security_profiles()
 
     def _load_challenges(self) -> None:
-        """Load challenge definitions from JSON file and imported challenges"""
+        """Load challenge definitions using ConfigManager for unified config loading"""
         try:
-            # Load built-in challenges
-            if not self.challenges_path.exists():
-                raise ChallengeError(f"Challenges file not found: {self.challenges_path}")
+            # Use config manager to get all available challenge IDs
+            challenge_ids = self.config_manager.list_available_challenges()
 
-            with open(self.challenges_path, 'r') as f:
-                data = json.load(f)
-
-            # Validate schema
-            if 'challenges' not in data:
-                raise ChallengeError("Invalid challenges file: missing 'challenges' key")
-
-            # Index challenges by ID
-            self.challenges = {
-                challenge['id']: challenge
-                for challenge in data['challenges']
-            }
-
-            # Load imported challenges
-            imported_path = Path('/app/data/imported/imported_challenges.json')
-            if imported_path.exists():
+            # Load each challenge configuration through config manager
+            self.challenges = {}
+            for challenge_id in challenge_ids:
                 try:
-                    with open(imported_path, 'r') as f:
-                        imported_data = json.load(f)
-                    
-                    if 'challenges' in imported_data:
-                        for challenge in imported_data['challenges']:
-                            self.challenges[challenge['id']] = challenge
-                        logger.info(f"Loaded {len(imported_data['challenges'])} imported challenges")
+                    config = self.config_manager.get_challenge_config(challenge_id)
+                    self.challenges[challenge_id] = config
                 except Exception as e:
-                    logger.warning(f"Failed to load imported challenges: {e}")
+                    logger.warning(f"Failed to load challenge {challenge_id}: {e}")
 
-            logger.info(f"Loaded {len(self.challenges)} challenge definitions")
+            logger.info(f"Loaded {len(self.challenges)} challenge definitions via ConfigManager")
 
-        except (json.JSONDecodeError, FileNotFoundError, KeyError) as e:
-            logger.error(f"Failed to load challenges: {e}")
+        except Exception as e:
+            logger.error(f"Failed to load challenges via ConfigManager: {e}")
             raise ChallengeError(f"Challenge loading failed: {e}")
     
     def reload_challenges(self) -> None:
         """Reload challenge definitions (useful after importing new challenges)"""
         logger.info("Reloading challenge definitions...")
+        # Reload config manager cache first
+        self.config_manager.reload_configurations()
+        # Then reload challenges using updated config manager
         self._load_challenges()
 
     def _load_security_profiles(self) -> None:
