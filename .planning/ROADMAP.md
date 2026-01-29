@@ -80,6 +80,13 @@ Plans:
 
 **Requirements:** DISC-06, UI-01, UI-02 (3 requirements)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Professional UI polish with shadcn/ui components and challenge validation system
+- [ ] 04-02-PLAN.md — Challenge import workflow with wizard UI and validation feedback
+- [ ] 04-03-PLAN.md — End-to-end platform polish and challenge import verification
+
 **Success Criteria:**
 1. All UI components use shadcn/ui design system for consistent appearance
 2. User can import custom challenges via configuration files
