@@ -226,38 +226,93 @@ start_platform() {
 check_health() {
     print_header "Health Check"
     
-    print_info "Waiting for services to be ready..."
-    sleep 3
+    print_info "Waiting for services to become healthy (timeout: 30s)..."
     
-    # Check API
-    if curl -s -f http://localhost:5000/health >/dev/null 2>&1; then
-        print_success "API is healthy"
-    else
-        print_warning "API health check failed (may still be starting up)"
+    local timeout=30
+    local elapsed=0
+    local check_interval=2
+    
+    # Function to check container health status
+    check_container_health() {
+        local container=$1
+        local status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null)
+        echo "$status"
+    }
+    
+    # Wait for API to be healthy
+    print_info "Checking API health..."
+    while [ $elapsed -lt $timeout ]; do
+        local api_health=$(check_container_health "dvc-api")
+        
+        if [ "$api_health" = "healthy" ]; then
+            print_success "API is healthy"
+            break
+        elif [ "$api_health" = "starting" ] || [ "$api_health" = "" ]; then
+            printf "."
+            sleep $check_interval
+            elapsed=$((elapsed + check_interval))
+        else
+            print_error "API health check failed with status: $api_health"
+            print_info "Check logs with: docker compose logs api"
+            return 1
+        fi
+    done
+    echo ""
+    
+    if [ $elapsed -ge $timeout ] && [ "$api_health" != "healthy" ]; then
+        print_error "API failed to become healthy within ${timeout}s"
+        print_info "Current status: $api_health"
+        print_info "Check logs with: docker compose logs api"
+        return 1
     fi
     
-    # Check Frontend
-    if curl -s -f http://localhost:3000 >/dev/null 2>&1; then
-        print_success "Frontend is healthy"
-    else
-        print_warning "Frontend health check failed (may still be starting up)"
+    # Wait for Frontend to be healthy
+    elapsed=0
+    print_info "Checking Frontend health..."
+    while [ $elapsed -lt $timeout ]; do
+        local frontend_health=$(check_container_health "dvc-frontend")
+        
+        if [ "$frontend_health" = "healthy" ]; then
+            print_success "Frontend is healthy"
+            break
+        elif [ "$frontend_health" = "starting" ] || [ "$frontend_health" = "" ]; then
+            printf "."
+            sleep $check_interval
+            elapsed=$((elapsed + check_interval))
+        else
+            print_error "Frontend health check failed with status: $frontend_health"
+            print_info "Check logs with: docker compose logs frontend"
+            return 1
+        fi
+    done
+    echo ""
+    
+    if [ $elapsed -ge $timeout ] && [ "$frontend_health" != "healthy" ]; then
+        print_error "Frontend failed to become healthy within ${timeout}s"
+        print_info "Current status: $frontend_health"
+        print_info "Check logs with: docker compose logs frontend"
+        return 1
     fi
     
+    # Check monitoring stack if in FULL mode
     if [ "$MONITOR_MODE" = true ]; then
-        # Check Prometheus
+        print_info "Checking monitoring stack..."
+        
+        # Prometheus and Grafana don't have healthchecks, so just test endpoints
         if curl -s -f http://localhost:9090/-/healthy >/dev/null 2>&1; then
             print_success "Prometheus is healthy"
         else
             print_warning "Prometheus health check failed (may still be starting up)"
         fi
         
-        # Check Grafana
         if curl -s -f http://localhost:3001/api/health >/dev/null 2>&1; then
             print_success "Grafana is healthy"
         else
             print_warning "Grafana health check failed (may still be starting up)"
         fi
     fi
+    
+    return 0
 }
 
 # Show running containers
@@ -306,7 +361,12 @@ EOF
     start_platform
     
     # Step 4: Health check
-    check_health
+    if ! check_health; then
+        print_error "Health check failed!"
+        print_info "Platform started but some services are not healthy"
+        print_info "Check logs with: docker compose logs"
+        exit 1
+    fi
     
     # Step 5: Show running containers
     show_containers

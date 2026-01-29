@@ -24,6 +24,12 @@ services:
       - no-new-privileges:true
     cap_add:
       - DAC_OVERRIDE  # For Docker socket access
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # Damn Vulnerable Containers Frontend
   frontend:
@@ -41,6 +47,13 @@ services:
       - monitoring
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   prometheus:
     image: prom/prometheus:v2.50.1
     container_name: dvc-prometheus
