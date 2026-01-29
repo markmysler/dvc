@@ -103,7 +103,7 @@ export function ChallengeImportForm({
       const formData = new FormData()
       formData.append('challengeFile', selectedFile)
 
-      const response = await fetch('/api/import', {
+      const response = await fetch('http://localhost:5000/api/import', {
         method: 'POST',
         body: formData
       })
@@ -179,7 +179,12 @@ export function ChallengeImportForm({
               <div>
                 <p className="font-medium">{selectedFile.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  {selectedFile.size >= 1024 * 1024 
+                    ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
+                    : selectedFile.size >= 1024
+                    ? `${(selectedFile.size / 1024).toFixed(2)} KB`
+                    : `${selectedFile.size} bytes`
+                  }
                 </p>
               </div>
               <div className="flex gap-2 justify-center">

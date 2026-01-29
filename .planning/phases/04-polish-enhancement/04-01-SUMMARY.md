@@ -20,7 +20,7 @@ tech-stack:
   patterns: [shadcn/ui composition, class-variance-authority variants, AJV schema compilation, security-first validation]
 
 key-files:
-  created: [frontend/components/enhanced/challenge-card-enhanced.tsx, frontend/components/enhanced/loading-skeleton.tsx, frontend/components/enhanced/progress-indicator.tsx, api/validation/schemas/challenge-schema.js, api/validation/security/container-security.js, api/validation/validators.js, scripts/validate-challenge.js]
+  created: [frontend/components/enhanced/challenge-card-enhanced.tsx, frontend/components/enhanced/loading-skeleton.tsx, frontend/components/enhanced/progress-indicator.tsx, api/validation/schemas/challenge-schema.js, api/validation/security/container-security.js, api/validation/validators.js, scripts/validate-challenge.py]
   modified: [frontend/package.json, package.json]
 
 key-decisions:
@@ -71,7 +71,7 @@ Each task was committed atomically:
 - `api/validation/schemas/challenge-schema.js` - JSON schema for challenge validation with security constraints
 - `api/validation/security/container-security.js` - Container security validation with capability whitelisting
 - `api/validation/validators.js` - AJV-based validation orchestrator with user-friendly error mapping
-- `scripts/validate-challenge.js` - CLI validation script with colored output and immediate feedback
+- `scripts/validate-challenge.py` - CLI validation script with colored output and immediate feedback
 - `frontend/package.json` - Added react-loading-skeleton dependency
 - `package.json` - Added ajv and ajv-formats dependencies
 

@@ -64,12 +64,23 @@ export function ChallengeList({
   
   const importStats = getImportStats() as ImportStats
 
-  const handleRemoveImported = (challengeId: string) => {
+  const handleRemoveImported = async (challengeId: string) => {
     if (confirm('Are you sure you want to remove this imported challenge?')) {
       try {
-        removeImportedChallenge(challengeId)
+        // Call API to delete imported challenge
+        const response = await fetch(`http://localhost:5000/api/import/${challengeId}`, {
+          method: 'DELETE',
+        })
+        
+        const data = await response.json()
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to delete challenge')
+        }
+        
         // Force re-render by updating refresh key
         setRefreshKey(prev => prev + 1)
+        alert('Challenge deleted successfully')
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error'
         alert('Failed to remove challenge: ' + message)

@@ -210,9 +210,11 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     # Register blueprints
     import challenges
     import flags
+    import import_handler
 
     app.register_blueprint(challenges.bp)
     app.register_blueprint(flags.flags_bp)
+    app.register_blueprint(import_handler.bp)
 
     # Record start time for uptime calculation
     if 'START_TIME' not in app.config:

@@ -15,17 +15,13 @@ export default function ImportPage() {
 
   const handleImportComplete = async (challenges: any[]) => {
     try {
-      // Store imported challenges in localStorage for persistence
-      const existingChallenges = JSON.parse(localStorage.getItem('importedChallenges') || '[]')
-      const updatedChallenges = [...existingChallenges, ...challenges]
-      localStorage.setItem('importedChallenges', JSON.stringify(updatedChallenges))
-
+      // Challenges are now persisted server-side, no need for localStorage
       // Show success message and redirect
       alert(`Successfully imported ${challenges.length} challenge${challenges.length !== 1 ? 's' : ''}!`)
       router.push('/')
     } catch (error) {
-      console.error('Failed to save imported challenges:', error)
-      alert('Import completed but failed to save challenges locally. Please try again.')
+      console.error('Failed to complete import:', error)
+      alert('Import completed but navigation failed. Please refresh the page.')
     }
   }
 

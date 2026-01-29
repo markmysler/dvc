@@ -99,8 +99,9 @@ class ChallengeOrchestrator:
         self._load_security_profiles()
 
     def _load_challenges(self) -> None:
-        """Load challenge definitions from JSON file"""
+        """Load challenge definitions from JSON file and imported challenges"""
         try:
+            # Load built-in challenges
             if not self.challenges_path.exists():
                 raise ChallengeError(f"Challenges file not found: {self.challenges_path}")
 
@@ -117,11 +118,30 @@ class ChallengeOrchestrator:
                 for challenge in data['challenges']
             }
 
+            # Load imported challenges
+            imported_path = Path('/app/data/imported/imported_challenges.json')
+            if imported_path.exists():
+                try:
+                    with open(imported_path, 'r') as f:
+                        imported_data = json.load(f)
+                    
+                    if 'challenges' in imported_data:
+                        for challenge in imported_data['challenges']:
+                            self.challenges[challenge['id']] = challenge
+                        logger.info(f"Loaded {len(imported_data['challenges'])} imported challenges")
+                except Exception as e:
+                    logger.warning(f"Failed to load imported challenges: {e}")
+
             logger.info(f"Loaded {len(self.challenges)} challenge definitions")
 
         except (json.JSONDecodeError, FileNotFoundError, KeyError) as e:
             logger.error(f"Failed to load challenges: {e}")
             raise ChallengeError(f"Challenge loading failed: {e}")
+    
+    def reload_challenges(self) -> None:
+        """Reload challenge definitions (useful after importing new challenges)"""
+        logger.info("Reloading challenge definitions...")
+        self._load_challenges()
 
     def _load_security_profiles(self) -> None:
         """Load security profiles from JSON file"""
@@ -278,6 +298,36 @@ class ChallengeOrchestrator:
             # Get challenge definition
             challenge = self.get_challenge(challenge_id)
             container_spec = challenge['container_spec']
+            image_name = container_spec['image']
+
+            # Check if image exists, build if needed (for imported challenges)
+            try:
+                self.docker_client.images.get(image_name)
+                logger.info(f"Image {image_name} already exists")
+            except docker.errors.ImageNotFound:
+                logger.info(f"Image {image_name} not found, building...")
+                
+                # Check if challenge has build context (imported challenges)
+                build_context = challenge.get('build_context')
+                if build_context and os.path.exists(build_context):
+                    logger.info(f"Building image from {build_context}")
+                    try:
+                        image, build_logs = self.docker_client.images.build(
+                            path=build_context,
+                            tag=image_name,
+                            rm=True,
+                            forcerm=True
+                        )
+                        logger.info(f"Successfully built image {image_name}")
+                        # Log build output for debugging
+                        for log in build_logs:
+                            if 'stream' in log:
+                                logger.debug(f"Build: {log['stream'].strip()}")
+                    except Exception as build_error:
+                        logger.error(f"Failed to build image: {build_error}")
+                        raise ChallengeError(f"Failed to build challenge image: {build_error}")
+                else:
+                    raise ChallengeError(f"Challenge image not available: {image_name}")
 
             # Generate unique session
             session_id = self._generate_session_id()

@@ -13,6 +13,7 @@ services:
       - ./challenges:/app/challenges:ro
       - ./security:/app/security:ro
       - ./engine:/app/engine:ro
+      - ./tmp/imported:/app/data/imported  # Writable volume for imported challenges
     environment:
       - FLASK_ENV=development
       - DOCKER_HOST=unix:///var/run/docker.sock

@@ -88,7 +88,8 @@ def list_challenges():
                 'description': challenge_data.get('description', ''),
                 'tags': challenge_data.get('tags', []),
                 'points': challenge_data.get('points', 0),
-                'estimated_time': challenge_data.get('estimated_time', '30 minutes')
+                'estimated_time': challenge_data.get('estimated_time', '30 minutes'),
+                'imported': challenge_data.get('imported', False)
             }
             challenge_list.append(challenge_info)
 

@@ -26,28 +26,9 @@ class ChallengeStore {
    * @returns {Array} Array of imported challenges
    */
   loadImportedChallenges() {
-    // Check if running in browser environment
-    if (typeof window === 'undefined') {
-      return [];
-    }
-
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.IMPORTED_CHALLENGES);
-      if (!stored) return [];
-
-      const challenges = JSON.parse(stored);
-
-      // Validate structure and add import metadata
-      return challenges.map(challenge => ({
-        ...challenge,
-        imported: true,
-        importedAt: challenge.importedAt || new Date().toISOString(),
-        importSource: challenge.importSource || 'unknown'
-      }));
-    } catch (error) {
-      console.error('Failed to load imported challenges:', error);
-      return [];
-    }
+    // Imported challenges are now managed server-side
+    // Return empty array to avoid duplicates
+    return [];
   }
 
   /**
@@ -55,28 +36,10 @@ class ChallengeStore {
    * @param {Array} challenges - Array of challenges to save
    */
   saveImportedChallenges(challenges) {
-    // Check if running in browser environment
-    if (typeof window === 'undefined') {
-      console.warn('Cannot save to localStorage during SSR');
-      return;
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEYS.IMPORTED_CHALLENGES, JSON.stringify(challenges));
-
-      // Update metadata
-      const metadata = {
-        lastUpdated: new Date().toISOString(),
-        totalImported: challenges.length,
-        importSources: [...new Set(challenges.map(c => c.importSource))]
-      };
-      localStorage.setItem(STORAGE_KEYS.IMPORT_METADATA, JSON.stringify(metadata));
-
-      this.importedChallenges = challenges;
-    } catch (error) {
-      console.error('Failed to save imported challenges:', error);
-      throw new Error('Failed to persist imported challenges');
-    }
+    // Imported challenges are now managed server-side
+    // No need to save to localStorage
+    console.log('Imported challenges are now persisted server-side');
+    this.importedChallenges = [];
   }
 
   /**
