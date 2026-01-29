@@ -15,11 +15,6 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
-  - job_name: 'cadvisor'
+  - job_name: 'containers'
     static_configs:
-      - targets: ['cadvisor:8080']
-    metric_relabel_configs:
-      - source_labels: [id]
-        regex: '/docker/([0-9a-f]{12})[0-9a-f]{52}'
-        target_label: container_short_id
-        replacement: '$1'
+      - targets: ['localhost:8080']  # Future: cAdvisor or equivalent

@@ -19,6 +19,7 @@
         },
         "security_profile": "challenge"
       },
+      "build_context": "challenges/web-basic-xss",
       "description": "A simple web application vulnerable to cross-site scripting (XSS) attacks. Learn to identify and exploit reflected XSS vulnerabilities.",
       "difficulty": "beginner",
       "id": "web-basic-xss",
@@ -63,6 +64,7 @@
         },
         "security_profile": "challenge"
       },
+      "build_context": "challenges/path-traversal-challenge",
       "description": "Exploit a path traversal vulnerability to access files outside the intended directory. Learn about directory traversal attacks and how to identify insecure file handling.",
       "difficulty": "beginner",
       "id": "web-path-traversal",

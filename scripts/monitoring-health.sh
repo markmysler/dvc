@@ -23,6 +23,15 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Check if monitoring stack is running
+check_monitoring_enabled() {
+    if ! docker compose ps | grep -q "prometheus.*Up"; then
+        log_warning "Monitoring stack is not running"
+        log_info "Start with monitoring enabled: ./start.sh --monitor"
+        exit 0
+    fi
+}
+
 # Test HTTP endpoint with timeout
 test_endpoint() {
     local url="$1"
@@ -354,6 +363,9 @@ EOF
 }
 
 # Main command handler
+# First check if monitoring is enabled
+check_monitoring_enabled
+
 case "${1:-status}" in
     status)
         quick_status

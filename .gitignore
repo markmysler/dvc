@@ -4,6 +4,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+
 # Environment variables
 .env
 .env.local
@@ -14,6 +22,9 @@ yarn-error.log*
 # Container runtime data
 logs/
 *.log
+
+# Setup marker
+.setup_complete
 
 # Monitoring data
 monitoring/data/
@@ -43,6 +54,10 @@ secrets/
 *.swp
 *.swo
 *~
+
+# Claude and planning (development artifacts)
+.claude/
+.planning/
 
 # OS generated files
 .DS_Store

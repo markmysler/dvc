@@ -292,17 +292,18 @@ class ChallengeOrchestrator:
             container_spec = challenge['container_spec']
             image_name = container_spec['image']
 
-            # Check if image exists, build if needed (for imported challenges)
+            # Check if image exists, build if needed (on-demand building)
             try:
                 self.docker_client.images.get(image_name)
                 logger.info(f"Image {image_name} already exists")
             except docker.errors.ImageNotFound:
-                logger.info(f"Image {image_name} not found, building...")
+                logger.warning(f"Image {image_name} not found locally")
                 
-                # Check if challenge has build context (imported challenges)
+                # Check if challenge has build context for on-demand building
                 build_context = challenge.get('build_context')
                 if build_context and os.path.exists(build_context):
-                    logger.info(f"Building image from {build_context}")
+                    logger.info(f"Building challenge image on-demand from {build_context}")
+                    logger.info(f"This may take a minute on first spawn...")
                     try:
                         image, build_logs = self.docker_client.images.build(
                             path=build_context,
@@ -316,10 +317,17 @@ class ChallengeOrchestrator:
                             if 'stream' in log:
                                 logger.debug(f"Build: {log['stream'].strip()}")
                     except Exception as build_error:
-                        logger.error(f"Failed to build image: {build_error}")
-                        raise ChallengeError(f"Failed to build challenge image: {build_error}")
+                        logger.error(f"Failed to build challenge image: {build_error}")
+                        raise ChallengeError(
+                            f"Failed to build challenge image: {build_error}. "
+                            f"Check that the Dockerfile exists at {build_context}"
+                        )
                 else:
-                    raise ChallengeError(f"Challenge image not available: {image_name}")
+                    error_msg = f"Challenge image '{image_name}' not available and no build context found"
+                    if not build_context:
+                        error_msg += ". Add 'build_context' to challenge definition for on-demand building"
+                    logger.error(error_msg)
+                    raise ChallengeError(error_msg)
 
             # Generate unique session
             session_id = self._generate_session_id()

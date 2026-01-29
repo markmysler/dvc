@@ -58,32 +58,53 @@ You need these installed on your Linux machine:
 
 - **Docker Engine** (20.10+) with daemon running
 - **Docker Compose** (v2.0+)
-- **Python** (3.9+)
-- **Node.js** (18.0+) with npm
+- **Python** (3.9+) - Optional, for validation scripts
+- **Node.js** (18.0+) - Only if building frontend from source
 
 ### Setup and Run
+
+The easiest way to start DVC is using the provided startup script:
 
 ```bash
 # Clone the repository
 git clone <repo-url>
 cd dvc
 
-# Start everything with Docker Compose (recommended)
-docker-compose up -d
+# Start with API and Frontend only (recommended for development)
+./start.sh
 
-# OR manually start components
-python -m api.app  # Start Flask API on port 5000
-cd frontend && npm run dev  # Start Next.js on port 3001
+# OR start with full monitoring stack (Grafana + Prometheus)
+./start.sh --monitor
+```
+
+The `start.sh` script will:
+1. ✅ Validate Docker and Docker Compose are installed
+2. ✅ Perform first-time setup (create directories, initialize environment)
+3. ✅ Start the platform containers
+4. ✅ Run health checks on all services
+
+**Note:** Challenge images are built automatically on-demand when first spawned, so startup is fast even with many challenges.
+
+**Alternative: Manual Docker Compose**
+
+```bash
+# Start only core services (API + Frontend)
+docker compose up -d api frontend
+
+# Start everything including monitoring
+docker compose up -d
 ```
 
 ### Access the Platform
 
 Once running, open these URLs:
 
-- **Challenge Browser**: http://localhost:3001
+- **Challenge Browser**: http://localhost:3000
 - **API Documentation**: http://localhost:5000/api/health
-- **Grafana Dashboards**: http://localhost:3000 (admin/admin)
-- **Prometheus Metrics**: http://localhost:9090
+- **Grafana Dashboards**: http://localhost:3001 (admin/admin) - *Only if started with --monitor*
+- **Prometheus Metrics**: http://localhost:9090 - *Only if started with --monitor*
+
+**Note:** By default, only the core platform (API + Frontend) starts. Use `./start.sh --monitor` to enable Grafana and Prometheus.
 
 ### Using the Platform
 
@@ -202,12 +223,74 @@ dvc/
 │       └── provisioning/        # Auto-provisioning configs
 │
 ├── scripts/
+│   ├── start.sh                 # Main startup script (validates deps, first-time setup)
 │   ├── setup.sh                 # One-time setup script
 │   ├── verify.sh                # Verify Docker + dependencies
 │   ├── cleanup.sh               # Remove stopped containers
+│   ├── validate-challenge.py    # Challenge validation utility
 │   └── challenge-setup.sh       # Build challenge images
 │
 └── docker-compose.yml           # Multi-container orchestration
+```
+
+## Useful Commands
+
+### Platform Management
+
+```bash
+# Start platform (lightweight mode - API + Frontend only)
+./start.sh
+
+# Start with monitoring (Grafana + Prometheus)
+./start.sh --monitor
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes
+docker compose down -v
+
+# View logs
+docker compose logs -f
+
+# View logs for specific service
+docker compose logs -f api
+docker compose logs -f frontend
+
+# Restart specific service
+docker compose restart api
+
+# Check service status
+docker compose ps
+```
+
+### Monitoring Commands
+
+```bash
+# Check monitoring stack health (requires --monitor)
+./scripts/monitoring-health.sh
+
+# View challenge container metrics
+curl http://localhost:9090/api/v1/query?query=container_memory_usage_bytes
+
+# Check system resources
+docker stats
+```
+
+### Development Commands
+
+```bash
+# Validate a challenge before adding
+python scripts/validate-challenge.py /path/to/config.json --verbose
+
+# Rebuild challenge images
+cd challenges/my-challenge && docker build -t dvc/my-challenge:latest .
+
+# Test challenge locally
+docker run -p 5000:5000 -e CHALLENGE_FLAG="DVC{test}" dvc/my-challenge:latest
+
+# Clean up dangling containers
+docker container prune -f
 ```
 
 ## Development
@@ -412,11 +495,27 @@ docker exec dvc-frontend env | grep API_URL
 
 This is a learning platform. Contributions welcome:
 
-- Add new challenge scenarios
-- Improve security profiles
-- Enhance monitoring dashboards
-- Write documentation
-- Report bugs
+- **Add new challenges**: See [CHALLENGE_DEVELOPMENT.md](CHALLENGE_DEVELOPMENT.md) for detailed guide
+- **Use Import Wizard**: Upload challenges via the web interface at http://localhost:3000/import
+- **Improve security profiles**: Enhance container hardening configurations
+- **Enhance monitoring dashboards**: Add Grafana visualizations (when monitoring is enabled)
+- **Write documentation**: Help others understand the platform
+- **Report bugs**: Open issues for any problems found
+
+### Adding Challenges
+
+There are two ways to add challenges:
+
+1. **Via Import Wizard (Easiest)**
+   - Navigate to http://localhost:3000/import
+   - Click the "Guide" tab for step-by-step instructions
+   - Upload a ZIP file with your challenge
+
+2. **Via Code (Advanced)**
+   - Read [CHALLENGE_DEVELOPMENT.md](CHALLENGE_DEVELOPMENT.md) for comprehensive guide
+   - Create challenge directory in `challenges/`
+   - Add entry to `challenges/definitions/challenges.json`
+   - Build and test locally
 
 ## License
 
