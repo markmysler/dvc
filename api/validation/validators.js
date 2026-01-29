@@ -17,7 +17,7 @@ function createValidator() {
   const ajv = new Ajv({
     allErrors: true,
     verbose: true,
-    strict: true,
+    strict: false,
     allowUnionTypes: true
   });
 

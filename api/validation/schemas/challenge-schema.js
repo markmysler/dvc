@@ -93,7 +93,7 @@ const challengeSchema = {
       properties: {
         image: {
           type: "string",
-          pattern: "^[a-z0-9][a-z0-9.-]*[a-z0-9](:[a-z0-9][a-z0-9.-]*[a-z0-9])?$",
+          pattern: "^[a-z0-9]+([a-z0-9._/-]*[a-z0-9])*(:[a-z0-9]+([a-z0-9._-]*[a-z0-9])*)?$",
           minLength: 5,
           maxLength: 200,
           description: "Docker image name with optional tag"
@@ -159,12 +159,15 @@ const challengeSchema = {
               }
             },
             additionalProperties: false,
-            if: {
-              properties: { type: { const: "volume" } }
-            },
-            then: {
-              required: ["source"]
-            }
+            anyOf: [
+              {
+                properties: { type: { const: "tmpfs" } }
+              },
+              {
+                properties: { type: { const: "volume" } },
+                required: ["source"]
+              }
+            ]
           },
           description: "Volume mounts (security-restricted)"
         },
@@ -297,7 +300,10 @@ const singleChallengeSchema = {
   $id: "https://dvc.local/schemas/single-challenge.json",
   title: "Single Challenge Definition",
   description: "Schema for validating a single challenge",
-  ...challengeSchema.$defs.challenge
+  type: "object",
+  required: ["id", "name", "description", "difficulty", "category", "points", "container_spec"],
+  properties: challengeSchema.$defs.challenge.properties,
+  $defs: challengeSchema.$defs
 };
 
 module.exports = {
