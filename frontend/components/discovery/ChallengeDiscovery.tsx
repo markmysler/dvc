@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChallengeCard } from './ChallengeCard';
 import { ChallengeTable } from './ChallengeTable';
 import { ChallengeFilters } from './ChallengeFilters';
+import { ChallengeList } from './challenge-list';
 import { ChallengeDetailModal } from './ChallengeDetailModal';
 import { ProgressDashboard } from '../analytics/ProgressDashboard';
 import { useChallenges, useSpawnChallenge, useRunningChallenges } from '@/hooks/useChallenges';
@@ -306,42 +307,16 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
                 )}
               </div>
 
-              {/* Challenge grid/table */}
-              {view === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredChallenges.map((challenge) => {
-                    const progress = getChallengeProgress(challenge.id);
-                    return (
-                      <ChallengeCard
-                        key={challenge.id}
-                        challenge={challenge}
-                        progress={progress ? {
-                          user_id: 'default-user',
-                          challenge_id: challenge.id,
-                          status: progress.completed ? 'completed' : 'attempted',
-                          attempts: progress.attempts,
-                          completed_at: progress.completedAt,
-                          best_time: progress.timeSpent,
-                          flags_submitted: progress.attempts,
-                          hints_used: progress.hintsUsed,
-                          points_earned: progress.completed ? challenge.points : 0,
-                        } : undefined}
-                        onSpawn={handleSpawnChallenge}
-                        onViewDetails={handleViewDetails}
-                        isSpawning={spawnMutation.isPending}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <ChallengeTable
-                  challenges={filteredChallenges}
-                  onSpawn={handleSpawnChallenge}
-                  onViewDetails={handleViewDetails}
-                  isSpawning={spawnMutation.isPending}
-                  spawningChallengeId={spawnMutation.variables?.challenge_id}
-                />
-              )}
+              {/* Unified Challenge List (handles both grid/table views and imported challenges) */}
+              <ChallengeList
+                challenges={filteredChallenges}
+                view={view}
+                onSpawn={handleSpawnChallenge}
+                onViewDetails={handleViewDetails}
+                isSpawning={spawnMutation.isPending}
+                spawningChallengeId={spawnMutation.variables?.challenge_id}
+                getChallengeProgress={getChallengeProgress}
+              />
 
               {/* Empty state */}
               {filteredChallenges.length === 0 && (

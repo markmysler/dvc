@@ -39,6 +39,12 @@ export default function RootLayout({
                     <span className="text-sm text-muted-foreground">v3.0</span>
                   </div>
                   <div className="flex items-center space-x-4">
+                    <a
+                      href="/import"
+                      className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                    >
+                      Import Challenge
+                    </a>
                     <span className="text-sm text-muted-foreground">
                       API: localhost:5000
                     </span>
