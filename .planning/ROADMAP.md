@@ -1,7 +1,7 @@
 # Roadmap: Damn Vulnerable Containers
 
 **Created:** 2026-01-27
-**Phases:** 4
+**Phases:** 5
 **Depth:** Quick (3-5 phases, critical path focus)
 
 ## Overview
@@ -92,6 +92,21 @@ Plans:
 2. User can import custom challenges via configuration files
 3. System provides smooth, responsive interactions throughout the interface
 
+### Phase 5: Container Lifecycle & Hints
+**Goal:** Improved challenge container lifecycle management with hints system and simplified configuration
+
+**Dependencies:** Phase 4 (requires complete platform functionality)
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Container health monitoring with automated recovery and background processing
+- [ ] 05-02-PLAN.md — Progressive hint system with time-based disclosure and UI integration
+- [ ] 05-03-PLAN.md — Configuration simplification with unified challenge management and migration
+
+**Details:**
+Phase 5 enhances the platform with three key improvements: automated container health monitoring for reliable challenge operations, a progressive hint system to improve learning experience, and unified configuration management to eliminate duplicate config files. These enhancements provide a more robust and maintainable platform while improving user experience through better reliability and adaptive learning support.
+
 ## Progress Tracking
 
 | Phase | Status | Requirements | Success Criteria | Dependencies Met |
@@ -100,6 +115,7 @@ Plans:
 | 2 - Challenge Engine | ✓ Complete | 4/4 mapped | 4/4 met | ✓ Phase 1 |
 | 3 - Discovery Interface | ✓ Complete | 8/8 mapped | 5/5 met | ✓ Phase 2 |
 | 4 - Polish & Enhancement | Pending | 3/3 mapped | 3 defined | ✓ Phase 3 |
+| 5 - Container Lifecycle & Hints | Not planned | TBD | TBD | ✓ Phase 4 |
 
 **Total Coverage:** 23/23 requirements mapped (includes v1 requirements only)
 
@@ -113,6 +129,8 @@ Phase 2: Challenge Engine
 Phase 3: Discovery Interface
     ↓
 Phase 4: Polish & Enhancement
+    ↓
+Phase 5: Container Lifecycle & Hints
 ```
 
 **Critical Path:** Each phase depends on the previous phase's completion. No parallel execution possible due to architectural dependencies.
@@ -123,6 +141,7 @@ Phase 4: Polish & Enhancement
 **Phase 2 Complete:** Users can exploit vulnerabilities and validate flags
 **Phase 3 Complete:** Users can discover and track progress through challenges
 **Phase 4 Complete:** Platform provides professional UX with extensible challenge system
+**Phase 5 Complete:** Enhanced container lifecycle management with challenge hints and simplified configuration
 
 **Project Complete:** Users can safely practice real vulnerability exploitation on isolated, disposable containers with auto-generated flags and clean reset between attempts.
 
