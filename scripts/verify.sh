@@ -494,8 +494,8 @@ display_summary() {
         echo
         echo "Next steps:"
         echo "  1. Run 'npm start' to launch the monitoring stack"
-        echo "  2. Access Grafana at http://localhost:3000"
-        echo "  3. Access Prometheus at http://localhost:9090"
+        echo "  2. Access Grafana at http://${HOST:-localhost}:3000"
+        echo "  3. Access Prometheus at http://${HOST:-localhost}:9090"
         return 0
     else
         echo -e "${RED}✗ Some tests failed.${NC}"

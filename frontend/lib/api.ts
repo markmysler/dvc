@@ -64,7 +64,7 @@ export class APIError extends Error {
 }
 
 // Base API configuration
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || `http://${process.env.HOST || 'localhost'}:5000`;
 
 // Helper function for making API requests
 async function apiRequest<T>(

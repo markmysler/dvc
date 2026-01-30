@@ -524,7 +524,8 @@ class ChallengeOrchestrator:
             for container_port, host_bindings in ports.items():
                 if host_bindings:
                     host_port = host_bindings[0]['HostPort']
-                    port_info[container_port] = f"localhost:{host_port}"
+                    host = os.getenv('HOST', 'localhost')
+                    port_info[container_port] = f"{host}:{host_port}"
         except Exception as e:
             logger.warning(f"Failed to extract port info: {e}")
         return port_info

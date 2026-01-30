@@ -50,20 +50,20 @@ test_prometheus() {
     log_info "Testing Prometheus health..."
 
     # Check if Prometheus is accessible
-    if ! test_endpoint "http://localhost:9090/-/healthy" "Prometheus health"; then
-        log_error "Prometheus is not accessible at localhost:9090"
+    if ! test_endpoint "http://${HOST:-localhost}:9090/-/healthy" "Prometheus health"; then
+        log_error "Prometheus is not accessible at ${HOST:-localhost}:9090"
         return 1
     fi
 
     # Check if Prometheus can query metrics
-    if ! curl -s "http://localhost:9090/api/v1/query?query=up" | grep -q '"status":"success"'; then
+    if ! curl -s "http://${HOST:-localhost}:9090/api/v1/query?query=up" | grep -q '"status":"success"'; then
         log_error "Prometheus query API is not responding correctly"
         return 1
     fi
 
     # Check scrape targets
     local targets_response
-    targets_response=$(curl -s "http://localhost:9090/api/v1/targets")
+    targets_response=$(curl -s "http://${HOST:-localhost}:9090/api/v1/targets")
 
     if echo "$targets_response" | grep -q '"health":"up"'; then
         log_success "Prometheus is healthy and scraping targets"
@@ -79,14 +79,14 @@ test_prometheus() {
 test_node_exporter() {
     log_info "Testing node_exporter metrics..."
 
-    if ! test_endpoint "http://localhost:9100/metrics" "Node Exporter"; then
-        log_error "Node Exporter is not accessible at localhost:9100"
+    if ! test_endpoint "http://${HOST:-localhost}:9100/metrics" "Node Exporter"; then
+        log_error "Node Exporter is not accessible at ${HOST:-localhost}:9100"
         return 1
     fi
 
     # Check for key metrics
     local metrics_response
-    metrics_response=$(curl -s "http://localhost:9100/metrics")
+    metrics_response=$(curl -s "http://${HOST:-localhost}:9100/metrics")
 
     local required_metrics=(
         "node_cpu_seconds_total"
@@ -116,14 +116,14 @@ test_node_exporter() {
 test_grafana() {
     log_info "Testing Grafana health..."
 
-    if ! test_endpoint "http://localhost:3000/api/health" "Grafana health"; then
-        log_error "Grafana is not accessible at localhost:3000"
+    if ! test_endpoint "http://${HOST:-localhost}:3000/api/health" "Grafana health"; then
+        log_error "Grafana is not accessible at ${HOST:-localhost}:3000"
         return 1
     fi
 
     # Test Grafana API with basic auth
     local grafana_response
-    if grafana_response=$(curl -s -u admin:admin "http://localhost:3000/api/datasources"); then
+    if grafana_response=$(curl -s -u admin:admin "http://${HOST:-localhost}:3000/api/datasources"); then
         if echo "$grafana_response" | grep -q "prometheus"; then
             log_success "Grafana is healthy and Prometheus datasource is configured"
         else
@@ -186,7 +186,7 @@ test_alerts() {
 
     # Check if Prometheus can evaluate rules
     local rules_response
-    if rules_response=$(curl -s "http://localhost:9090/api/v1/rules"); then
+    if rules_response=$(curl -s "http://${HOST:-localhost}:9090/api/v1/rules"); then
         if echo "$rules_response" | grep -q '"status":"success"'; then
             local rule_count
             rule_count=$(echo "$rules_response" | jq '.data.groups[].rules | length' 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
@@ -312,21 +312,21 @@ quick_status() {
     local errors=0
 
     # Quick service checks
-    if ! test_endpoint "http://localhost:9100/metrics" "Node Exporter" 5; then
+    if ! test_endpoint "http://${HOST:-localhost}:9100/metrics" "Node Exporter" 5; then
         log_error "Node Exporter: DOWN"
         ((errors++))
     else
         log_success "Node Exporter: UP"
     fi
 
-    if ! test_endpoint "http://localhost:9090/-/healthy" "Prometheus" 5; then
+    if ! test_endpoint "http://${HOST:-localhost}:9090/-/healthy" "Prometheus" 5; then
         log_error "Prometheus: DOWN"
         ((errors++))
     else
         log_success "Prometheus: UP"
     fi
 
-    if ! test_endpoint "http://localhost:3000/api/health" "Grafana" 5; then
+    if ! test_endpoint "http://${HOST:-localhost}:3000/api/health" "Grafana" 5; then
         log_error "Grafana: DOWN"
         ((errors++))
     else

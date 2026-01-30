@@ -193,7 +193,7 @@ rule_files:
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['${HOST:-localhost}:9090']
 
   - job_name: 'node'
     static_configs:
@@ -201,7 +201,7 @@ scrape_configs:
 
   - job_name: 'containers'
     static_configs:
-      - targets: ['localhost:8080']  # Future: cAdvisor or equivalent
+      - targets: ['${HOST:-localhost}:8080']  # Future: cAdvisor or equivalent
 EOF
         log_verbose "Created Prometheus configuration"
     else
@@ -298,9 +298,9 @@ main() {
         log_info "Next steps:"
         echo "  1. Run 'docker compose up -d' to start all services"
         echo "  2. Run './scripts/verify.sh' to validate the deployment"
-        echo "  3. Access Frontend at http://localhost:3001"
-        echo "  4. Access Grafana at http://localhost:3000 (admin/admin)"
-        echo "  5. Access Prometheus at http://localhost:9090"
+        echo "  3. Access Frontend at http://${HOST:-localhost}:3001"
+        echo "  4. Access Grafana at http://${HOST:-localhost}:3000 (admin/admin)"
+        echo "  5. Access Prometheus at http://${HOST:-localhost}:9090"
     fi
 }
 

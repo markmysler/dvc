@@ -46,7 +46,7 @@ export default function RootLayout({
                       Import Challenge
                     </a>
                     <span className="text-sm text-muted-foreground">
-                      API: localhost:5000
+                      API: {process.env.HOST || 'localhost'}:5000
                     </span>
                   </div>
                 </nav>

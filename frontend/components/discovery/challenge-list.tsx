@@ -76,7 +76,7 @@ export function ChallengeList({
     if (confirm('Are you sure you want to remove this imported challenge?')) {
       try {
         // Call API to delete imported challenge
-        const response = await fetch(`http://localhost:5000/api/import/${challengeId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `http://${process.env.HOST || 'localhost'}:5000`}/api/import/${challengeId}`, {
           method: 'DELETE',
         })
         

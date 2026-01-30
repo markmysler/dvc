@@ -203,10 +203,10 @@ start_platform() {
         
         print_success "All services started!"
         print_info "Access points:"
-        print_info "  - Frontend:   http://localhost:3000"
-        print_info "  - API:        http://localhost:5000"
-        print_info "  - Grafana:    http://localhost:3001"
-        print_info "  - Prometheus: http://localhost:9090"
+        print_info "  - Frontend:   http://${HOST:-localhost}:3000"
+        print_info "  - API:        http://${HOST:-localhost}:5000"
+        print_info "  - Grafana:    http://${HOST:-localhost}:3001"
+        print_info "  - Prometheus: http://${HOST:-localhost}:9090"
     else
         print_info "Starting in LITE mode (API + Frontend only)..."
         
@@ -215,8 +215,8 @@ start_platform() {
         
         print_success "Core services started!"
         print_info "Access points:"
-        print_info "  - Frontend: http://localhost:3000"
-        print_info "  - API:      http://localhost:5000"
+        print_info "  - Frontend: http://${HOST:-localhost}:3000"
+        print_info "  - API:      http://${HOST:-localhost}:5000"
         print_info ""
         print_info "💡 Tip: Use './start.sh --monitor' to enable Grafana and Prometheus"
     fi
@@ -299,13 +299,13 @@ check_health() {
         print_info "Checking monitoring stack..."
         
         # Prometheus and Grafana don't have healthchecks, so just test endpoints
-        if curl -s -f http://localhost:9090/-/healthy >/dev/null 2>&1; then
+        if curl -s -f http://${HOST:-localhost}:9090/-/healthy >/dev/null 2>&1; then
             print_success "Prometheus is healthy"
         else
             print_warning "Prometheus health check failed (may still be starting up)"
         fi
         
-        if curl -s -f http://localhost:3001/api/health >/dev/null 2>&1; then
+        if curl -s -f http://${HOST:-localhost}:3001/api/health >/dev/null 2>&1; then
             print_success "Grafana is healthy"
         else
             print_warning "Grafana health check failed (may still be starting up)"

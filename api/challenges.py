@@ -19,6 +19,7 @@ Security considerations:
 """
 
 import logging
+import os
 import time
 from typing import Dict, Any, List
 
@@ -238,12 +239,14 @@ def spawn_challenge():
             for port_key in ['80/tcp', '8080/tcp', '3000/tcp', '5000/tcp']:
                 if port_key in container_ports:
                     host_port = container_ports[port_key].split(':')[-1]  # Extract port from 'localhost:55522'
-                    access_url = f"http://localhost:{host_port}"
+                    host = os.getenv('HOST', 'localhost')
+                    access_url = f"http://{host}:{host_port}"
                     break
             # If no common port found, use the first available
             if not access_url and container_ports:
                 first_port = list(container_ports.values())[0].split(':')[-1]
-                access_url = f"http://localhost:{first_port}"
+                host = os.getenv('HOST', 'localhost')
+                access_url = f"http://{host}:{first_port}"
 
         response_data = {
             'status': 'success',
@@ -458,12 +461,14 @@ def list_running_challenges():
                 for port_key in ['80/tcp', '8080/tcp', '3000/tcp', '5000/tcp']:
                     if port_key in ports:
                         host_port = ports[port_key].split(':')[-1]  # Extract port from 'localhost:55522'
-                        access_url = f"http://localhost:{host_port}"
+                        host = os.getenv('HOST', 'localhost')
+                        access_url = f"http://{host}:{host_port}"
                         break
                 # If no common port found, use the first available
                 if not access_url and ports:
                     first_port = list(ports.values())[0].split(':')[-1]
-                    access_url = f"http://localhost:{first_port}"
+                    host = os.getenv('HOST', 'localhost')
+                    access_url = f"http://{host}:{first_port}"
 
             challenge_info = {
                 'container_id': container['container_id'],

@@ -17,6 +17,7 @@ services:
     environment:
       - FLASK_ENV=development
       - DOCKER_HOST=unix:///var/run/docker.sock
+      - HOST=${HOST:-localhost}
     networks:
       - monitoring
       - challenges
@@ -25,7 +26,7 @@ services:
     cap_add:
       - DAC_OVERRIDE  # For Docker socket access
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      test: ["CMD", "curl", "-f", "http://${HOST:-localhost}:5000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -42,13 +43,14 @@ services:
       - "3001:3001"  # Use 3001 to avoid conflict with Grafana
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://dvc-api:5000
+      - NEXT_PUBLIC_API_URL=http://${HOST:-localhost}:5000
+      - HOST=${HOST:-localhost}
     networks:
       - monitoring
     depends_on:
       - api
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      test: ["CMD", "curl", "-f", "http://${HOST:-localhost}:3001"]
       interval: 10s
       timeout: 5s
       retries: 3

@@ -103,7 +103,7 @@ export function ChallengeImportForm({
       const formData = new FormData()
       formData.append('challengeFile', selectedFile)
 
-      const response = await fetch('http://localhost:5000/api/import', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `http://${process.env.HOST || 'localhost'}:5000`}/api/import`, {
         method: 'POST',
         body: formData
       })

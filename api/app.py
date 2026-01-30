@@ -68,12 +68,11 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         app.config.update(config)
 
     # Configure CORS for frontend integration
+    host = os.getenv('HOST', 'localhost')
     CORS(app, origins=[
-        "http://localhost:3000",  # Next.js dev server
-        "http://localhost:3001",  # Next.js dev server
-        "http://127.0.0.1:3000",
-        "http://localhost:8080",  # Alternative frontend ports
-        "http://127.0.0.1:8080",
+        f"http://{host}:3000",  # Next.js dev server
+	f"http://{host}:3001",  # Next.js dev server
+        f"http://{host}:8080",  # Alternative frontend ports
     ], supports_credentials=True)
 
     # Security headers middleware
