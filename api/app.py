@@ -220,11 +220,20 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     app.register_blueprint(flags.flags_bp)
     app.register_blueprint(import_handler.bp)
 
+    # Container lifecycle: ending a session (expiry, solve, stop) also stops
+    # its container, and a reaper removes expired challenge containers that
+    # have no session (e.g. sessions lost when the API restarted)
+    from engine.session_manager import get_session_manager, CLEANUP_INTERVAL
+    orchestrator = challenges.get_orchestrator()
+    get_session_manager().container_stopper = (
+        lambda container_id: orchestrator.stop_challenge(container_id, force=True)
+    )
+    if not app.config.get('TESTING'):
+        _start_container_reaper(orchestrator, CLEANUP_INTERVAL)
+
     # Validate sessions against running containers on startup
     try:
-        from engine.session_manager import get_session_manager
         session_manager = get_session_manager()
-        orchestrator = challenges.get_orchestrator()
         cleaned = session_manager.validate_sessions_against_containers(orchestrator)
         if cleaned > 0:
             logger.info(f"Startup health check: cleaned {cleaned} stale session(s)")
@@ -241,7 +250,25 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     return app
 
 
+def _start_container_reaper(orchestrator, interval: int) -> None:
+    """Periodically stop challenge containers whose timeout label has passed"""
+    def reap():
+        try:
+            cleaned = orchestrator.cleanup_expired()
+            if cleaned:
+                logger.info(f"Reaper stopped {cleaned} expired challenge container(s)")
+        except Exception as e:
+            logger.error(f"Container reaper failed: {e}")
+        finally:
+            timer = threading.Timer(interval, reap)
+            timer.daemon = True
+            timer.start()
+
+    reap()
+
+
 # Import time module for timing functionality
+import threading
 import time
 
 # Create default app instance for development

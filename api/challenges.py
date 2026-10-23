@@ -195,6 +195,14 @@ def spawn_challenge():
                 'expires_at': existing_session['expires_at']
             })
 
+        # Check the per-user limit before spawning, so a rejected request
+        # never leaves a container running without a session
+        if not session_manager.has_capacity(user_id):
+            raise UserSessionLimitError(
+                f"User {user_id} has reached the maximum of "
+                f"{session_manager.max_sessions_per_user} running challenges"
+            )
+
         # Spawn challenge container
         orchestrator = get_orchestrator()
 
@@ -222,13 +230,18 @@ def spawn_challenge():
             'container_port': container_ports.get('80/tcp', container_ports.get('8080/tcp'))
         }
 
-        session_id = session_manager.create_session(
-            user_id=user_id,
-            challenge_id=challenge_id,
-            container_info=container_info,
-            session_timeout=session_timeout,
-            instance_data=instance_data
-        )
+        try:
+            session_id = session_manager.create_session(
+                user_id=user_id,
+                challenge_id=challenge_id,
+                container_info=container_info,
+                session_timeout=session_timeout,
+                instance_data=instance_data
+            )
+        except Exception:
+            # No session means nothing would ever stop this container
+            orchestrator.stop_challenge(container_id, force=True)
+            raise
 
         expires_at = time.time() + session_timeout
 
@@ -353,8 +366,8 @@ def stop_challenge(session_id: str):
         logger.info(f"Stopping challenge {challenge_id} container {container_id} (session: {session_id})")
         container_stopped = orchestrator.stop_challenge(container_id)
 
-        # Cleanup session regardless of container stop result
-        session_cleaned = session_manager.cleanup_session(session_id)
+        # Cleanup session regardless of container stop result (already stopped above)
+        session_cleaned = session_manager.cleanup_session(session_id, stop_container=False)
 
         if container_stopped and session_cleaned:
             message = f"Challenge {challenge_id} stopped successfully"

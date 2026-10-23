@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify, current_app
 from werkzeug.exceptions import BadRequest, NotFound
 from typing import Dict, Any
 import logging
+import threading
 
 # Import our custom modules
 import sys
@@ -102,28 +103,18 @@ def validate_submitted_flag():
             })
             logger.info(f"Valid flag submission for challenge {challenge_id} by user {user_id}")
             
-            # Stop the challenge container after successful flag submission
-            try:
-                from challenges import get_orchestrator
-                orchestrator = get_orchestrator()
-                container_id = session.get('container_id')
-                if container_id:
-                    import threading
-                    import time
-                    
-                    def delayed_shutdown():
-                        time.sleep(30)  # 30 second delay
-                        try:
-                            orchestrator.stop_challenge(container_id, user_id)
-                            logger.info(f"Automatically stopped challenge {challenge_id} container {container_id} after successful flag submission")
-                        except Exception as e:
-                            logger.error(f"Failed to auto-stop container {container_id}: {e}")
-                    
-                    # Start shutdown in background thread
-                    shutdown_thread = threading.Thread(target=delayed_shutdown, daemon=True)
-                    shutdown_thread.start()
-            except Exception as e:
-                logger.warning(f"Failed to initiate auto-shutdown for challenge {challenge_id}: {e}")
+            # End the session 30 seconds after a solve. Ending the session
+            # stops the container too and frees the user's session slot.
+            def delayed_shutdown():
+                try:
+                    if session_manager.cleanup_session(session_id):
+                        logger.info(f"Ended solved session {session_id} ({challenge_id})")
+                except Exception as e:
+                    logger.error(f"Failed to end solved session {session_id}: {e}")
+
+            shutdown_timer = threading.Timer(30, delayed_shutdown)
+            shutdown_timer.daemon = True
+            shutdown_timer.start()
         else:
             response_data.update({
                 "message": "Incorrect flag. Try again!",
