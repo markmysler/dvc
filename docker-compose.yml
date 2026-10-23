@@ -38,20 +38,20 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://${HOST:-localhost}:5000
     container_name: dvc-frontend
     restart: unless-stopped
     ports:
       - "${DVC_BIND_ADDRESS:-127.0.0.1}:3001:3001"  # Use 3001 to avoid conflict with Grafana
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://${HOST:-localhost}:5000
       - HOST=${HOST:-localhost}
     networks:
       - monitoring
     depends_on:
       - api
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${HOST:-localhost}:3001"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001"]
       interval: 10s
       timeout: 5s
       retries: 3
