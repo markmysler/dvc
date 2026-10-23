@@ -105,6 +105,9 @@ export function ChallengeImportForm({
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `http://${process.env.HOST || 'localhost'}:5000`}/api/import`, {
         method: 'POST',
+        // Required by the API: custom headers force a CORS preflight, which
+        // stops other websites from submitting imports (CSRF)
+        headers: { 'X-DVC-Request': '1' },
         body: formData
       })
 

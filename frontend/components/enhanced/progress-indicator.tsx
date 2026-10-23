@@ -38,7 +38,7 @@ const progressVariants = cva(
 )
 
 interface ProgressIndicatorProps
-  extends Omit<React.ComponentProps<typeof Progress>, "value">,
+  extends Omit<React.ComponentProps<typeof Progress>, "value" | "color">,
     VariantProps<typeof progressVariants> {
   value: number
   max?: number

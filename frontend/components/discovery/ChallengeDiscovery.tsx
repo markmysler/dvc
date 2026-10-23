@@ -401,7 +401,7 @@ export function ChallengeDiscovery({ initialData }: ChallengeDiscoveryProps) {
                 onViewDetails={handleViewDetails}
                 isSpawning={spawnMutation.isPending}
                 spawningChallengeId={spawnMutation.variables?.challenge_id}
-                stoppingChallengeId={stoppingChallengeId}
+                stoppingChallengeId={stoppingChallengeId ?? undefined}
                 getChallengeProgress={getChallengeProgress}
               />
 

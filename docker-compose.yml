@@ -7,7 +7,7 @@ services:
     container_name: dvc-api
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "${DVC_BIND_ADDRESS:-127.0.0.1}:5000:5000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker challenge spawning
       - ./challenges:/app/challenges:ro
@@ -15,12 +15,13 @@ services:
       - ./engine:/app/engine:ro
       - ./tmp/imported:/app/data/imported  # Writable volume for imported challenges
     environment:
-      - FLASK_ENV=development
+      - FLASK_ENV=production
       - DOCKER_HOST=unix:///var/run/docker.sock
       - HOST=${HOST:-localhost}
+      - DVC_BIND_ADDRESS=${DVC_BIND_ADDRESS:-127.0.0.1}
+      - FLAG_SECRET_KEY=${FLAG_SECRET_KEY:?FLAG_SECRET_KEY is not set - run ./start.sh to generate one in .env}
     networks:
       - monitoring
-      - challenges
     security_opt:
       - no-new-privileges:true
     cap_add:
@@ -37,20 +38,20 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://${HOST:-localhost}:5000
     container_name: dvc-frontend
     restart: unless-stopped
     ports:
-      - "3001:3001"  # Use 3001 to avoid conflict with Grafana
+      - "${DVC_BIND_ADDRESS:-127.0.0.1}:3001:3001"  # Use 3001 to avoid conflict with Grafana
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://${HOST:-localhost}:5000
       - HOST=${HOST:-localhost}
     networks:
       - monitoring
     depends_on:
       - api
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${HOST:-localhost}:3001"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -61,7 +62,7 @@ services:
     container_name: dvc-prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "${DVC_BIND_ADDRESS:-127.0.0.1}:9090:9090"
     volumes:
       - prometheus_data:/prometheus
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -71,8 +72,6 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=15d'
-      - '--web.enable-lifecycle'
-      - '--web.enable-admin-api'
     networks:
       - monitoring
     security_opt:
@@ -94,7 +93,7 @@ services:
     container_name: dvc-grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${DVC_BIND_ADDRESS:-127.0.0.1}:3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -125,7 +124,7 @@ services:
     container_name: dvc-node-exporter
     restart: unless-stopped
     ports:
-      - "9100:9100"
+      - "${DVC_BIND_ADDRESS:-127.0.0.1}:9100:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -151,7 +150,7 @@ services:
     container_name: dvc-cadvisor
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${DVC_BIND_ADDRESS:-127.0.0.1}:8080:8080"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -167,7 +166,8 @@ services:
       - monitoring
     security_opt:
       - no-new-privileges:true
-    privileged: true
+    # Not privileged: cAdvisor still reports per-container CPU/memory/network,
+    # only some disk I/O metrics are unavailable
 
 volumes:
   prometheus_data:
@@ -192,10 +192,5 @@ networks:
       config:
         - subnet: 172.20.0.0/16
           gateway: 172.20.0.1
-  challenges:
-    driver: bridge
-    internal: false
-    ipam:
-      config:
-        - subnet: 172.21.0.0/16
-          gateway: 172.21.0.1
+  # Challenge containers do not use a compose network: the orchestrator
+  # creates "dvc-challenges" (no outbound NAT, no inter-container traffic)

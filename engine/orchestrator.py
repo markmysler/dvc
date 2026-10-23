@@ -20,9 +20,14 @@ from docker.client import DockerClient
 from docker.models.containers import Container
 from docker.errors import DockerException, APIError, ImageNotFound
 
-from .flag_system import generate_unique_flag
+from .flag_system import generate_unique_flag, get_flag_secret_key
 from .health_monitor import HealthMonitor
 from .config_manager import ConfigManager
+
+# Per-session challenge isolation (see "Network isolation" in ChallengeOrchestrator)
+SESSION_NETWORK_PREFIX = 'dvc-net-'
+PROXY_IMAGE = 'dvc/port-proxy:latest'
+PROXY_BUILD_CONTEXT = Path(__file__).resolve().parent / 'proxy'
 
 # Configure logging
 logging.basicConfig(
@@ -53,13 +58,16 @@ class ChallengeOrchestrator:
 
     def __init__(self,
                  challenges_path: str = "challenges/definitions/challenges.json",
-                 security_profiles_path: str = "security/container-profiles.json"):
+                 security_profiles_path: str = "security/container-profiles.json",
+                 docker_client: Optional[DockerClient] = None):
         """
         Initialize the challenge orchestrator
 
         Args:
             challenges_path: Path to challenges definition file (for config manager)
             security_profiles_path: Path to security profiles configuration
+            docker_client: Docker client to use (tests pass a fake); connects
+                to the local Docker daemon when omitted
         """
         self.challenges_path = Path(challenges_path)
         self.security_profiles_path = Path(security_profiles_path)
@@ -71,33 +79,36 @@ class ChallengeOrchestrator:
         self.config_manager = ConfigManager(master_config_path=str(challenges_path))
 
         # Initialize Docker client with error handling
-        try:
-            # Try to connect via Docker socket (for containerized deployment)
-            import os
-            import traceback
-            if os.path.exists('/var/run/docker.sock'):
-                logger.info("Found Docker socket, initializing client...")
-                # Use APIClient for better compatibility with urllib3 < 2.0
-                from docker import APIClient
-                api_client = APIClient(base_url='unix:///var/run/docker.sock')
-                api_client.ping()
-                # Now create the high-level client
-                self.docker_client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
-            else:
-                logger.info("Docker socket not found, using environment...")
-                # Fallback to environment-based connection
-                self.docker_client = docker.from_env()
+        if docker_client is not None:
+            self.docker_client = docker_client
+        else:
+            try:
+                # Try to connect via Docker socket (for containerized deployment)
+                import os
+                import traceback
+                if os.path.exists('/var/run/docker.sock'):
+                    logger.info("Found Docker socket, initializing client...")
+                    # Use APIClient for better compatibility with urllib3 < 2.0
+                    from docker import APIClient
+                    api_client = APIClient(base_url='unix:///var/run/docker.sock')
+                    api_client.ping()
+                    # Now create the high-level client
+                    self.docker_client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
+                else:
+                    logger.info("Docker socket not found, using environment...")
+                    # Fallback to environment-based connection
+                    self.docker_client = docker.from_env()
 
-            self.docker_client.ping()
-            logger.info("Docker client initialized successfully")
-        except DockerException as e:
-            logger.error(f"Failed to initialize Docker client: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise ChallengeError(f"Docker connection failed: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error initializing Docker client: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise ChallengeError(f"Docker connection failed: {e}")
+                self.docker_client.ping()
+                logger.info("Docker client initialized successfully")
+            except DockerException as e:
+                logger.error(f"Failed to initialize Docker client: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise ChallengeError(f"Docker connection failed: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error initializing Docker client: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise ChallengeError(f"Docker connection failed: {e}")
 
         # Initialize health monitoring
         self.health_monitor = HealthMonitor(self.docker_client)
@@ -205,6 +216,8 @@ class ChallengeOrchestrator:
             profile_name = "default"
 
         profile = self.security_profiles[profile_name]
+        profile_resources = profile.get('resources', {})
+        challenge_limits = container_spec.get('resource_limits', {})
 
         # Start with container spec, override with security profile
         security_config = {
@@ -212,18 +225,18 @@ class ChallengeOrchestrator:
             'cap_drop': profile.get('capDrop', ['ALL']),
             'cap_add': profile.get('capAdd', []),
             'user': profile.get('user', '1000:1000'),
-            'read_only': profile.get('readOnlyRootfs', False),  # Allow write for challenge apps
+            'read_only': profile.get('readOnlyRootfs', True),
             'security_opt': profile.get('securityOpts', ['no-new-privileges:true']),
+            'sysctls': profile.get('sysctls', {}),
 
-            # Resource limits from profile and challenge
-            'mem_limit': container_spec.get('resource_limits', {}).get('memory', '512m'),
+            # Resource limits: challenge definition first, then profile defaults
+            'mem_limit': challenge_limits.get('memory', profile_resources.get('memory', '512m')),
             'nano_cpus': self._parse_cpu_limit(
-                container_spec.get('resource_limits', {}).get('cpus', '1.0')
+                challenge_limits.get('cpus', profile_resources.get('cpus', '1.0'))
             ),
-            'pids_limit': container_spec.get('resource_limits', {}).get('pids_limit', 256),
+            'pids_limit': challenge_limits.get('pids_limit', profile_resources.get('pidsLimit', 256)),
 
-            # Network isolation
-            'network_mode': 'bridge',
+            # No IPC sharing; the network is set per session in spawn_challenge
             'ipc_mode': 'none',
 
             # Tmpfs mounts from profile
@@ -232,23 +245,96 @@ class ChallengeOrchestrator:
             }),
 
             # Environment variables from challenge
-            'environment': container_spec.get('environment', {}),
-
-            # Port mappings from challenge (map to random host ports)
-            'ports': {
-                f"{container_port}/tcp": None  # None means Docker will assign random port
-                for container_port in container_spec.get('ports', {}).keys()
-            },
+            'environment': dict(container_spec.get('environment', {})),
         }
 
-        # Additional ulimits if specified (with higher defaults for challenges)
+        # Ulimits exactly as the profile defines them
         if 'ulimits' in profile:
             security_config['ulimits'] = [
-                docker.types.Ulimit(name=name, soft=max(limits['soft'], 1024), hard=max(limits['hard'], 2048))
+                docker.types.Ulimit(name=name, soft=limits['soft'], hard=limits['hard'])
                 for name, limits in profile['ulimits'].items()
             ]
 
         return security_config
+
+    # ── Network isolation ────────────────────────────────────────────────
+    #
+    # Each challenge session gets its own `internal` Docker network that only
+    # the challenge and a small socat port proxy are attached to. Internal
+    # networks have no route out, so a player with code execution inside a
+    # challenge cannot reach the internet, the Docker host (including the
+    # platform API) or other players' challenges. The proxy also sits on the
+    # default bridge, where it publishes the challenge port to the host.
+
+    def _create_session_network(self, session_id: str) -> str:
+        """Create the internal network for one challenge session"""
+        name = f"{SESSION_NETWORK_PREFIX}{session_id}"
+        self.docker_client.networks.create(
+            name,
+            driver='bridge',
+            internal=True,
+            labels={'dvc.network.session': session_id},
+        )
+        return name
+
+    def _ensure_proxy_image(self) -> None:
+        """Build the socat proxy image on first use"""
+        try:
+            self.docker_client.images.get(PROXY_IMAGE)
+        except ImageNotFound:
+            logger.info(f"Building port proxy image {PROXY_IMAGE}")
+            self.docker_client.images.build(path=str(PROXY_BUILD_CONTEXT), tag=PROXY_IMAGE, rm=True)
+
+    def _start_port_proxy(self, session_id: str, network_name: str,
+                          target_name: str, container_ports: List[str]) -> Container:
+        """
+        Start the proxy that publishes a challenge's ports to the host.
+
+        Ports are bound to DVC_BIND_ADDRESS (127.0.0.1 by default), so the
+        vulnerable app is only reachable from this machine.
+        """
+        self._ensure_proxy_image()
+        bind_address = os.getenv('DVC_BIND_ADDRESS', '127.0.0.1')
+        forwards = ' & '.join(
+            f"socat TCP-LISTEN:{port},fork,reuseaddr TCP:{target_name}:{port}"
+            for port in container_ports
+        )
+        proxy = self.docker_client.containers.run(
+            image=PROXY_IMAGE,
+            name=f"{target_name}-proxy",
+            command=['sh', '-c', f"{forwards} & wait"],
+            labels={'dvc.proxy.for': target_name, 'dvc.proxy.session': session_id},
+            ports={f"{port}/tcp": (bind_address, None) for port in container_ports},
+            detach=True,
+            read_only=True,
+            cap_drop=['ALL'],
+            security_opt=['no-new-privileges:true'],
+            sysctls={'net.ipv4.ip_unprivileged_port_start': '0'},
+            mem_limit='32m',
+            pids_limit=64,
+        )
+        # Second leg: join the challenge's internal network to reach it by name
+        self.docker_client.networks.get(network_name).connect(proxy)
+        return proxy
+
+    def _remove_session_resources(self, container_name: str, session_id: Optional[str]) -> None:
+        """Remove a challenge's proxy container and session network (best effort)"""
+        for proxy in self.docker_client.containers.list(
+                all=True, filters={'label': f'dvc.proxy.for={container_name}'}):
+            try:
+                proxy.remove(force=True)
+            except docker.errors.NotFound:
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to remove proxy {proxy.name}: {e}")
+
+        if session_id:
+            for network in self.docker_client.networks.list(
+                    filters={'label': f'dvc.network.session={session_id}'}):
+                try:
+                    network.remove()
+                except Exception as e:
+                    logger.warning(f"Failed to remove network {network.name}: {e}")
 
     def _parse_cpu_limit(self, cpu_str: str) -> int:
         """Convert CPU limit string to nano CPUs for Docker API"""
@@ -261,16 +347,16 @@ class ChallengeOrchestrator:
 
     def _generate_session_id(self) -> str:
         """Generate unique session ID for container tracking"""
-        return str(uuid.uuid4())[:8]
+        return uuid.uuid4().hex
 
     def _get_flag_secret_key(self) -> str:
-        """Get secret key for flag generation from environment or default"""
-        return os.getenv('FLAG_SECRET_KEY', 'default-secret-key-change-in-production')
+        """Get secret key for flag generation (shared with the validator)"""
+        return get_flag_secret_key()
 
     def spawn_challenge(self,
                        challenge_id: str,
                        user_id: str,
-                       session_timeout: int = 3600) -> str:
+                       session_timeout: int = 3600) -> Tuple[str, str]:
         """
         Spawn a challenge container with security isolation
 
@@ -280,7 +366,7 @@ class ChallengeOrchestrator:
             session_timeout: Container lifetime in seconds (default 1 hour)
 
         Returns:
-            Container ID of spawned challenge
+            (container_id, instance_data); instance_data is needed to validate the flag
 
         Raises:
             ChallengeNotFoundError: If challenge ID not found
@@ -303,7 +389,7 @@ class ChallengeOrchestrator:
                 build_context = challenge.get('build_context')
                 if build_context and os.path.exists(build_context):
                     logger.info(f"Building challenge image on-demand from {build_context}")
-                    logger.info(f"This may take a minute on first spawn...")
+                    logger.info("This may take a minute on first spawn...")
                     try:
                         image, build_logs = self.docker_client.images.build(
                             path=build_context,
@@ -334,7 +420,8 @@ class ChallengeOrchestrator:
             container_name = f"challenge-{challenge_id}-{session_id}"
 
             # Generate unique flag for this challenge instance
-            instance_data = f"timestamp:{int(time.time())},nonce:{session_id}"
+            started_at = int(time.time())
+            instance_data = f"timestamp:{started_at},nonce:{session_id}"
             challenge_flag = generate_unique_flag(
                 challenge_id=challenge_id,
                 user_id=user_id,
@@ -354,7 +441,7 @@ class ChallengeOrchestrator:
                 'CHALLENGE_ID': challenge_id,
                 'USER_ID': user_id,
                 'SESSION_ID': session_id,
-                'SESSION_START': str(int(time.time())),
+                'SESSION_START': str(started_at),
                 'SESSION_TIMEOUT': str(session_timeout),
                 'CHALLENGE_FLAG': challenge_flag
             })
@@ -364,7 +451,7 @@ class ChallengeOrchestrator:
                 'dvc.challenge.id': challenge_id,
                 'dvc.challenge.user': user_id,
                 'dvc.challenge.session': session_id,
-                'dvc.challenge.started': str(int(time.time())),
+                'dvc.challenge.started': str(started_at),
                 'dvc.challenge.timeout': str(session_timeout),
                 'dvc.challenge.name': challenge['name'],
                 'dvc.challenge.category': challenge['category']
@@ -373,15 +460,30 @@ class ChallengeOrchestrator:
             logger.info(f"Spawning challenge {challenge_id} for user {user_id}")
             logger.debug(f"Container security config: {security_config}")
 
-            # Create and start container
-            container = self.docker_client.containers.run(
-                image=container_spec['image'],
-                name=container_name,
-                labels=labels,
-                detach=True,
-                remove=False,  # Keep container for inspection after stop
-                **security_config
-            )
+            # Create the challenge on its own internal network, then publish
+            # its ports through the proxy (see "Network isolation")
+            network_name = self._create_session_network(session_id)
+            try:
+                container = self.docker_client.containers.run(
+                    image=container_spec['image'],
+                    name=container_name,
+                    labels=labels,
+                    network=network_name,
+                    detach=True,
+                    remove=False,  # Keep container for inspection after stop
+                    **security_config
+                )
+                container_ports = [str(p) for p in container_spec.get('ports', {}).keys()]
+                if container_ports:
+                    self._start_port_proxy(session_id, network_name, container_name, container_ports)
+            except Exception:
+                # Don't leave a half-started session behind
+                try:
+                    self.docker_client.containers.get(container_name).remove(force=True)
+                except docker.errors.NotFound:
+                    pass
+                self._remove_session_resources(container_name, session_id)
+                raise
 
             # Track active container
             self.active_containers[container.id] = {
@@ -434,7 +536,6 @@ class ChallengeOrchestrator:
                 raise ChallengeError(f"Container {container_id} is not a challenge container")
 
             challenge_id = labels['dvc.challenge.id']
-            user_id = labels.get('dvc.challenge.user', 'unknown')
 
             logger.info(f"Stopping challenge {challenge_id} container {container_id}")
 
@@ -448,8 +549,9 @@ class ChallengeOrchestrator:
             else:
                 container.stop(timeout=10)
 
-            # Remove container after stop
+            # Remove container after stop, then its proxy and session network
             container.remove()
+            self._remove_session_resources(container.name, labels.get('dvc.challenge.session'))
 
             # Update tracking
             if container_id in self.active_containers:
@@ -517,10 +619,13 @@ class ChallengeOrchestrator:
             raise ChallengeError(f"Failed to list challenges: {e}")
 
     def _extract_port_info(self, container: Container) -> Dict[str, str]:
-        """Extract port mapping information from container"""
+        """Extract host port mappings for a challenge (published by its proxy)"""
         port_info = {}
         try:
-            ports = container.attrs.get('NetworkSettings', {}).get('Ports', {})
+            proxies = self.docker_client.containers.list(
+                filters={'label': f'dvc.proxy.for={container.name}'})
+            published_by = proxies[0] if proxies else container
+            ports = published_by.attrs.get('NetworkSettings', {}).get('Ports', {})
             for container_port, host_bindings in ports.items():
                 if host_bindings:
                     host_port = host_bindings[0]['HostPort']
@@ -659,68 +764,6 @@ class ChallengeOrchestrator:
         except Exception as e:
             logger.error(f"Error during orchestrator shutdown: {e}")
 
-    def validate_flag(self, challenge_id: str, user_id: str, submitted_flag: str) -> bool:
-        """
-        Validate a submitted flag for a challenge session.
-
-        Args:
-            challenge_id: Challenge identifier
-            user_id: User identifier
-            submitted_flag: Flag submitted by user
-
-        Returns:
-            True if flag is valid, False otherwise
-        """
-        from .flag_system import validate_flag
-
-        try:
-            # Get running challenge container for this user/challenge
-            filters = {
-                'label': [
-                    f'dvc.challenge.id={challenge_id}',
-                    f'dvc.challenge.user={user_id}'
-                ]
-            }
-
-            containers = self.docker_client.containers.list(filters=filters, all=False)
-
-            if not containers:
-                logger.warning(f"No running challenge container found for {challenge_id}/{user_id}")
-                return False
-
-            # Use the most recent container if multiple exist
-            container = containers[0]
-            labels = container.attrs.get('Config', {}).get('Labels', {})
-
-            # Reconstruct instance data from container labels
-            session_id = labels.get('dvc.challenge.session')
-            started_time = labels.get('dvc.challenge.started')
-
-            if not session_id or not started_time:
-                logger.error(f"Missing session data in container labels")
-                return False
-
-            instance_data = f"timestamp:{started_time},nonce:{session_id}"
-
-            # Validate flag using same secret key
-            is_valid = validate_flag(
-                flag=submitted_flag,
-                challenge_id=challenge_id,
-                user_id=user_id,
-                instance_data=instance_data,
-                secret_key=self._get_flag_secret_key()
-            )
-
-            if is_valid:
-                logger.info(f"Valid flag submitted for {challenge_id} by {user_id}")
-            else:
-                logger.info(f"Invalid flag submitted for {challenge_id} by {user_id}")
-
-            return is_valid
-
-        except Exception as e:
-            logger.error(f"Error validating flag: {e}")
-            return False
 
 def main():
     """CLI interface for testing orchestrator"""

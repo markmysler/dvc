@@ -17,11 +17,10 @@ Features:
 import threading
 import time
 import logging
-from typing import Dict, Optional, Set, Any
+from typing import Dict, Optional, Any
 from enum import Enum
-from datetime import datetime
 import docker
-from docker.errors import DockerException, NotFound, APIError
+from docker.errors import DockerException, NotFound
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -381,7 +380,6 @@ class HealthMonitor:
 
             config = self._monitored_containers.get(container_id, {})
             challenge_id = config.get('challenge_id', 'unknown')
-            user_id = config.get('user_id', 'unknown')
 
             logger.warning(
                 f"Unhealthy container detected: {container_id} ({challenge_id}) "

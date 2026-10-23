@@ -3,10 +3,10 @@ Flag validation endpoint for CTF challenge engine.
 Provides secure flag submission and validation against active sessions.
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import BadRequest, NotFound
-from typing import Dict, Any
 import logging
+import threading
 
 # Import our custom modules
 import sys
@@ -14,7 +14,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from engine.session_manager import get_session_manager
-from engine.flag_system import validate_flag
+from engine.flag_system import validate_flag, get_flag_secret_key
 
 # Create blueprint
 flags_bp = Blueprint('flags', __name__)
@@ -75,16 +75,13 @@ def validate_submitted_flag():
         user_id = session['user_id']
         instance_data = session['instance_data']
 
-        # Get secret key from config (in production, use environment variable)
-        secret_key = current_app.config.get('FLAG_SECRET_KEY', 'default-secret-key-change-in-production')
-
-        # Validate the flag
+        # Validate the flag with the same key the orchestrator used to generate it
         is_valid = validate_flag(
             submitted_flag,
             challenge_id,
             user_id,
             instance_data,
-            secret_key
+            get_flag_secret_key()
         )
 
         # Prepare response
@@ -105,28 +102,18 @@ def validate_submitted_flag():
             })
             logger.info(f"Valid flag submission for challenge {challenge_id} by user {user_id}")
             
-            # Stop the challenge container after successful flag submission
-            try:
-                from challenges import get_orchestrator
-                orchestrator = get_orchestrator()
-                container_id = session.get('container_id')
-                if container_id:
-                    import threading
-                    import time
-                    
-                    def delayed_shutdown():
-                        time.sleep(30)  # 30 second delay
-                        try:
-                            orchestrator.stop_challenge(container_id, user_id)
-                            logger.info(f"Automatically stopped challenge {challenge_id} container {container_id} after successful flag submission")
-                        except Exception as e:
-                            logger.error(f"Failed to auto-stop container {container_id}: {e}")
-                    
-                    # Start shutdown in background thread
-                    shutdown_thread = threading.Thread(target=delayed_shutdown, daemon=True)
-                    shutdown_thread.start()
-            except Exception as e:
-                logger.warning(f"Failed to initiate auto-shutdown for challenge {challenge_id}: {e}")
+            # End the session 30 seconds after a solve. Ending the session
+            # stops the container too and frees the user's session slot.
+            def delayed_shutdown():
+                try:
+                    if session_manager.cleanup_session(session_id):
+                        logger.info(f"Ended solved session {session_id} ({challenge_id})")
+                except Exception as e:
+                    logger.error(f"Failed to end solved session {session_id}: {e}")
+
+            shutdown_timer = threading.Timer(30, delayed_shutdown)
+            shutdown_timer.daemon = True
+            shutdown_timer.start()
         else:
             response_data.update({
                 "message": "Incorrect flag. Try again!",
@@ -194,6 +181,8 @@ def validate_multiple_flags():
             raise BadRequest("'submissions' must be an array")
 
         results = []
+        session_manager = get_session_manager()
+        secret_key = get_flag_secret_key()
 
         for i, submission in enumerate(submissions):
             try:
@@ -218,7 +207,7 @@ def validate_multiple_flags():
                     continue
 
                 # Get session
-                session = session_manager.get_session(session_id)
+                session = session_manager.get_session_by_id(session_id)
                 if not session:
                     results.append({
                         "index": i,
@@ -232,7 +221,6 @@ def validate_multiple_flags():
                 challenge_id = session['challenge_id']
                 user_id = session['user_id']
                 instance_data = session['instance_data']
-                secret_key = current_app.config.get('FLAG_SECRET_KEY', 'default-secret-key')
 
                 is_valid = validate_flag(flag, challenge_id, user_id, instance_data, secret_key)
 

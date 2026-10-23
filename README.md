@@ -1,532 +1,164 @@
 # Damn Vulnerable Containers (DVC)
 
-A self-hosted cybersecurity training platform where you practice offensive security techniques against intentionally vulnerable applications running in isolated Docker containers. Browse challenges Netflix-style, spawn containers on-demand, capture flags through exploitation, and track your progress—all running locally with zero cloud dependencies.
+[![CI](https://github.com/markmysler/dvc/actions/workflows/ci.yml/badge.svg)](https://github.com/markmysler/dvc/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-![Challenge Discovery Interface](docs/images/dashboard-overview.png)
-*Netflix-style challenge browser with filtering and progress tracking*
+A self-hosted platform for practising offensive security against intentionally vulnerable apps. Each challenge runs in its own locked-down Docker container. You start it from a web UI, exploit it, and submit the flag. Everything runs on your machine, with no accounts or cloud services.
 
-## What This Is
+![Challenge browser](docs/images/dashboard-overview.png)
 
-DVC is a complete CTF (Capture The Flag) platform that runs entirely on your local machine:
+> **Status:** the platform (orchestration, isolation, flags, hints, import) is complete. The catalogue currently ships **one** challenge (path traversal); more can be added through the import wizard or the [challenge development guide](CHALLENGE_DEVELOPMENT.md).
 
-- **Discovery UI**: Next.js frontend with Netflix-style browsing, filtering by difficulty/category/tags
-- **Challenge Engine**: Python Flask API that spawns isolated vulnerable containers with cryptographic flag generation
-- **Monitoring Stack**: Prometheus + Grafana for real-time observability of containers and system metrics
-- **Zero Infrastructure**: No databases, no authentication, no cloud services—just Docker and local files
+## Quick start
 
-Each challenge is a self-contained Docker container with a vulnerability to exploit. Flags are unique per instance using HMAC-SHA256, preventing sharing between users while enabling local-first architecture.
+Requires Docker with the Compose plugin, and `bash` with `openssl` or `python3`.
 
-![Challenge Detail Modal](docs/images/challenge-modal.png)
-*Challenge detail view with hints, learning objectives, and flag submission*
+```bash
+git clone https://github.com/markmysler/dvc.git
+cd dvc
+./start.sh            # API + frontend
+./start.sh --monitor  # also Prometheus, Grafana, cAdvisor, node-exporter
+```
+
+`start.sh` checks dependencies, generates a random `FLAG_SECRET_KEY` in `.env`, starts the containers and waits until they are healthy. Challenge images are built the first time each challenge is started, so expect a short wait then.
+
+| Service | URL |
+|---|---|
+| Challenge browser | http://localhost:3001 |
+| API | http://localhost:5000/api |
+| Grafana (`--monitor`) | http://localhost:3000 |
+| Prometheus (`--monitor`) | http://localhost:9090 |
+
+Stop everything with `docker compose down`.
+
+## Using it
+
+1. Open the challenge browser and pick a challenge.
+2. **Start challenge** launches your own instance and shows its URL (a random port on `127.0.0.1`).
+3. Exploit it. Hints unlock over time if you get stuck.
+4. Submit the flag (`flag{16 hex chars}`). Progress is kept in your browser's localStorage.
+5. A solved instance shuts down after 30 seconds; unsolved ones stop when their session expires (60 minutes by default).
+
+![Challenge detail](docs/images/challenge-modal.png)
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Your Machine                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Frontend (Next.js 16)                                       │
-│  ├─ Port 3001                                               │
-│  ├─ TanStack Query for state management                     │
-│  ├─ shadcn/ui components + Tailwind CSS                     │
-│  └─ localStorage for progress tracking                      │
-│                           │                                  │
-│                           ↓ HTTP API calls                   │
-│                                                              │
-│  Backend API (Flask/Python)                                  │
-│  ├─ Port 5000                                               │
-│  ├─ Challenge definitions (JSON)                            │
-│  ├─ Container orchestrator (Docker SDK)                     │
-│  ├─ Session manager (in-memory)                             │
-│  └─ Flag system (HMAC-SHA256)                               │
-│                           │                                  │
-│                           ↓ Docker API                       │
-│                                                              │
-│  Docker Engine                                               │
-│  ├─ Challenge containers (ephemeral)                        │
-│  ├─ Security profiles applied (seccomp, capabilities)       │
-│  ├─ Network isolation per container                         │
-│  └─ Automatic cleanup on timeout                            │
-│                                                              │
-│  Monitoring Stack                                            │
-│  ├─ Prometheus (port 9090) - metrics collection             │
-│  └─ Grafana (port 3000) - visualization dashboards          │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+Browser ──► Frontend (Next.js, :3001)
+   │
+   └──────► API (Flask + gunicorn, :5000) ──► Docker Engine (via socket)
+              ├─ orchestrator: build image, start challenge + port proxy
+              ├─ session manager: in-memory sessions, expiry, limits
+              ├─ flag system: HMAC-SHA256 per instance
+              └─ hint service: time-based progressive hints
+
+Per challenge session:
+   internal network "dvc-net-<session>"  (no route out)
+     ├─ challenge container   (read-only, no capabilities, uid 1000)
+     └─ socat port proxy ───► published on 127.0.0.1:<random port>
 ```
 
-## Quick Start
-
-### Prerequisites
-
-You need these installed on your Linux machine:
-
-- **Docker Engine** (20.10+) with daemon running
-- **Docker Compose** (v2.0+)
-- **Python** (3.9+) - Optional, for validation scripts
-- **Node.js** (18.0+) - Only if building frontend from source
-
-### Setup and Run
-
-The easiest way to start DVC is using the provided startup script:
-
-```bash
-# Clone the repository
-git clone https://github.com/markmysler/dvc.git
-cd dvc
-
-# Start with API and Frontend only (recommended for development)
-./start.sh
-
-# OR start with full monitoring stack (Grafana + Prometheus)
-./start.sh --monitor
-```
-
-The `start.sh` script will:
-1. ✅ Validate Docker and Docker Compose are installed
-2. ✅ Perform first-time setup (create directories, initialize environment)
-3. ✅ Start the platform containers
-4. ✅ Run health checks on all services
-
-**Note:** Challenge images are built automatically on-demand when first spawned, so startup is fast even with many challenges.
-
-**Alternative: Manual Docker Compose**
-
-```bash
-# Start only core services (API + Frontend)
-docker compose up -d api frontend
-
-# Start everything including monitoring
-docker compose up -d
-```
-
-### Access the Platform
-
-Once running, open these URLs:
-
-- **Challenge Browser**: http://localhost:3000
-- **API Documentation**: http://localhost:5000/api/health
-- **Grafana Dashboards**: http://localhost:3001 (admin/admin) - *Only if started with --monitor*
-- **Prometheus Metrics**: http://localhost:9090 - *Only if started with --monitor*
-
-**Note:** By default, only the core platform (API + Frontend) starts. Use `./start.sh --monitor` to enable Grafana and Prometheus.
-
-### Using the Platform
-
-1. **Browse Challenges**: Open http://localhost:3001 and filter by difficulty/category
-2. **Spawn Container**: Click "Start Challenge" to launch an isolated vulnerable container
-3. **Access Challenge**: The UI shows the container's access URL (random port)
-4. **Exploit Vulnerability**: Use your browser, Burp Suite, or CLI tools to find the flag
-5. **Submit Flag**: Paste the captured flag into the submission form
-6. **Auto-Cleanup**: Containers automatically stop after 30 minutes (configurable)
-
-## How It Works
-
-### Challenge Lifecycle
-
-```
-User clicks "Start Challenge"
-  ↓
-API receives spawn request with challenge_id + user_id
-  ↓
-Orchestrator reads challenge definition from challenges.json
-  ↓
-Docker builds/pulls challenge image
-  ↓
-Container spawned with:
-  - Unique flag generated via HMAC
-  - Security profile applied (dropped capabilities, read-only fs)
-  - Network isolation enabled
-  - Resource limits set (memory, CPU, PIDs)
-  ↓
-API returns session_id + container URL
-  ↓
-User exploits vulnerability to find flag
-  ↓
-User submits flag via UI
-  ↓
-API validates flag cryptographically
-  ↓
-Progress saved to localStorage
-  ↓
-Container auto-stops after timeout (30min default)
-```
-
-### Flag Generation System
-
-Flags are generated using HMAC-SHA256 for cryptographic security:
-
-```python
-flag = HMAC-SHA256(secret_key, "challenge_id:user_id:timestamp")
-format: flag{16-hex-characters}
-```
-
-This ensures:
-- **Uniqueness**: Each user gets a different flag per challenge instance
-- **Tamper-proof**: Flags cannot be forged without the secret key
-- **Timing-safe**: Validation uses constant-time comparison against timing attacks
-- **No database needed**: Flags are deterministically regenerated during validation
-
-### Security Profiles
-
-Every challenge container runs with hardened security:
-
-```yaml
-Security Profile: "challenge"
-- Capabilities: DROP ALL, ADD only [CHOWN, DAC_OVERRIDE]
-- User: Non-root (uid 1000)
-- Filesystem: Read-only root + writable tmpfs volumes
-- Network: Isolated bridge network (no internet by default)
-- Resources: Memory limit (256MB), CPU limit (0.5 cores), PID limit (128)
-- Seccomp: Custom profile blocking dangerous syscalls
-- No new privileges: Prevents privilege escalation
-```
-
-## Project Structure
-
-```
-dvc/
-├── api/                          # Flask REST API
-│   ├── app.py                   # Application factory + CORS
-│   ├── challenges.py            # Challenge spawn/stop endpoints
-│   └── flags.py                 # Flag validation endpoints
-│
-├── engine/                       # Core orchestration logic
-│   ├── orchestrator.py          # Docker container lifecycle manager
-│   ├── session_manager.py       # In-memory session tracking
-│   └── flag_system.py           # HMAC flag generation/validation
-│
-├── challenges/
-│   ├── definitions/
-│   │   └── challenges.json      # Challenge metadata + container specs
-│   └── test-challenge/          # Example vulnerable app
-│       ├── Dockerfile
-│       ├── app.py               # Vulnerable Flask app
-│       └── templates/
-│
-├── frontend/                     # Next.js 16 application
-│   ├── app/
-│   │   ├── page.tsx            # Main discovery page
-│   │   └── layout.tsx          # Root layout with providers
-│   ├── components/
-│   │   ├── discovery/          # Challenge browsing + filtering
-│   │   ├── analytics/          # Progress charts + stats
-│   │   └── ui/                 # shadcn/ui components
-│   ├── lib/
-│   │   ├── api.ts              # Typed API client
-│   │   └── types.ts            # TypeScript interfaces
-│   └── hooks/                   # React hooks for state
-│
-├── security/
-│   ├── container-profiles.json  # Seccomp + capability configs
-│   └── hardening.yml            # Security policy definitions
-│
-├── monitoring/
-│   ├── prometheus.yml           # Metrics scraping config
-│   └── grafana/
-│       ├── dashboards/          # Pre-built monitoring dashboards
-│       └── provisioning/        # Auto-provisioning configs
-│
-├── scripts/
-│   ├── start.sh                 # Main startup script (validates deps, first-time setup)
-│   ├── setup.sh                 # One-time setup script
-│   ├── verify.sh                # Verify Docker + dependencies
-│   ├── cleanup.sh               # Remove stopped containers
-│   ├── validate-challenge.py    # Challenge validation utility
-│   └── challenge-setup.sh       # Build challenge images
-│
-└── docker-compose.yml           # Multi-container orchestration
-```
-
-## Useful Commands
-
-### Platform Management
-
-```bash
-# Start platform (lightweight mode - API + Frontend only)
-./start.sh
-
-# Start with monitoring (Grafana + Prometheus)
-./start.sh --monitor
-
-# Stop all services
-docker compose down
-
-# Stop and remove volumes
-docker compose down -v
-
-# View logs
-docker compose logs -f
-
-# View logs for specific service
-docker compose logs -f api
-docker compose logs -f frontend
-
-# Restart specific service
-docker compose restart api
-
-# Check service status
-docker compose ps
-```
-
-### Monitoring Commands
-
-```bash
-# Check monitoring stack health (requires --monitor)
-./scripts/monitoring-health.sh
-
-# View challenge container metrics
-curl http://localhost:9090/api/v1/query?query=container_memory_usage_bytes
-
-# Check system resources
-docker stats
-```
-
-### Development Commands
-
-```bash
-# Validate a challenge before adding
-python scripts/validate-challenge.py /path/to/config.json --verbose
-
-# Rebuild challenge images
-cd challenges/my-challenge && docker build -t dvc/my-challenge:latest .
-
-# Test challenge locally
-docker run -p 5000:5000 -e CHALLENGE_FLAG="DVC{test}" dvc/my-challenge:latest
-
-# Clean up dangling containers
-docker container prune -f
-```
-
-## Development
-
-### Adding New Challenges
-
-1. **Create challenge directory**:
-```bash
-mkdir -p challenges/my-challenge
-```
-
-2. **Write Dockerfile + vulnerable app**:
-```dockerfile
-FROM python:3.11-slim
-COPY app.py /app/
-CMD ["python", "/app/app.py"]
-```
-
-3. **Define in challenges.json**:
-```json
-{
-  "id": "my-challenge",
-  "name": "My Vulnerable App",
-  "description": "Description of vulnerability",
-  "difficulty": "beginner",
-  "category": "web",
-  "points": 100,
-  "tags": ["sqli", "web"],
-  "container_spec": {
-    "image": "dvc/my-challenge:latest",
-    "ports": {"5000": null},
-    "environment": {"FLAG": "placeholder"},
-    "resource_limits": {
-      "memory": "256m",
-      "cpus": "0.5"
-    },
-    "security_profile": "challenge"
-  }
-}
-```
-
-4. **Build image**:
-```bash
-docker build -t dvc/my-challenge:latest challenges/my-challenge/
-```
-
-5. **Test locally**:
-```bash
-# API will auto-generate flag
-curl -X POST http://localhost:5000/api/challenges/spawn \
-  -H "Content-Type: application/json" \
-  -d '{"challenge_id": "my-challenge", "user_id": "test"}'
-```
-
-### Running Tests
-
-```bash
-# Python API tests
-cd api/
-pytest tests/
-
-# Frontend tests
-cd frontend/
-npm test
-
-# Docker security validation
-./scripts/verify.sh
-```
-
-### Monitoring and Debugging
-
-```bash
-# View all container logs
-docker-compose logs -f
-
-# View specific service
-docker-compose logs -f api
-docker-compose logs -f frontend
-
-# Check running challenges
-curl http://localhost:5000/api/challenges/running
-
-# View container resource usage
-docker stats
-
-# Check Prometheus metrics
-curl http://localhost:9090/api/v1/query?query=container_memory_usage_bytes
-```
+### Challenge lifecycle
+
+1. `POST /api/challenges` with `challenge_id` and `user_id`. The per-user limit (5 running challenges) is checked first.
+2. The orchestrator builds the image from `build_context` if it doesn't exist yet.
+3. A unique flag is generated: `HMAC-SHA256(FLAG_SECRET_KEY, "challenge:user:timestamp,nonce")`, truncated to 16 hex characters. It is passed to the container as `CHALLENGE_FLAG`.
+4. The challenge starts alone on a new **internal** Docker network, and a small socat proxy publishes its port on `127.0.0.1`.
+5. `POST /api/flags` recomputes the HMAC and compares it in constant time.
+6. Ending the session (solve, timeout or `DELETE`) removes the challenge, its proxy and its network. A reaper also removes expired containers left over from an API restart.
+
+### API
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/health` | Health and session stats |
+| GET | `/api/challenges` | Challenge catalogue |
+| POST | `/api/challenges` | Start a challenge (`challenge_id`, `user_id`, optional `session_timeout` 60–7200 s) |
+| GET | `/api/challenges/running` | Running challenges |
+| DELETE | `/api/challenges/<session_id>?user_id=` | Stop a challenge (owner only) |
+| POST | `/api/flags` | Submit a flag (`flag`, `session_id`) |
+| POST | `/api/flags/batch` | Submit several flags |
+| GET | `/api/hints?challenge_id=&session_id=` | Hints unlocked so far in a running session |
+| POST | `/api/hints` | Unlock the next hint early (`challenge_id`, `session_id`, `action: "request"`) |
+| GET | `/api/hints/status?challenge_id=&session_id=` | Hint progress and time to the next unlock |
+| POST | `/api/import/` | Import a challenge (JSON or ZIP, needs `X-DVC-Request: 1`) |
+| DELETE | `/api/import/<challenge_id>` | Remove an imported challenge |
+| GET | `/metrics` | Prometheus metrics (request counts and latency) |
+
+## Security model and known limitations
+
+DVC deliberately runs vulnerable code, so the platform's job is to keep that code contained. What it does:
+
+- **Challenge containers:** all capabilities dropped, `no-new-privileges`, Docker's default seccomp profile, uid 1000, a read-only root filesystem with small `noexec` tmpfs mounts, memory/CPU/PID limits, and no IPC namespace sharing ([`security/container-profiles.json`](security/container-profiles.json)).
+- **Network:** each challenge sits alone on an `internal` network. It cannot reach the internet, the Docker host, the platform API or other players' challenges. Players reach it only through the proxy.
+- **Local only by default:** every port, including challenge ports, is bound to `127.0.0.1`.
+- **Flags:** HMAC-SHA256 with a random per-install key. The platform refuses to start without a key or with a placeholder one.
+- **Import:** requires a custom header (CSRF protection), limits upload and extracted size, rejects unsafe ZIP paths, caps resource limits, always applies the hardened profile, and never trusts a user-supplied build path.
+
+Known limitations, by design for a single-user local lab:
+
+- **The API has no authentication** and controls the Docker socket, which is root-equivalent on the host. Keep it on `127.0.0.1`. If you set `DVC_BIND_ADDRESS` to expose it, only do so on an isolated lab network.
+- **Users are not authenticated.** The frontend uses one local user, and progress lives in localStorage.
+- **The flag is visible to code inside its own container** (it is in the environment). A player with code execution can read it, which still requires exploiting the challenge.
+- **Sessions are in memory.** Restarting the API forgets them; the reaper then stops their containers when they expire.
 
 ## Configuration
 
-### Environment Variables
+Set these in `.env` (created by `start.sh`) or your shell:
 
-Set these in `docker-compose.yml` or `.env`:
+| Variable | Default | Purpose |
+|---|---|---|
+| `FLAG_SECRET_KEY` | generated | HMAC key for flags (required, 32+ characters) |
+| `DVC_BIND_ADDRESS` | `127.0.0.1` | Interface for all published ports, including challenges |
+| `HOST` | `localhost` | Hostname shown in challenge URLs and allowed by CORS |
 
-```bash
-# API Configuration
-FLASK_ENV=development            # development or production
-SECRET_KEY=your-secret-key       # For HMAC flag generation
-DOCKER_HOST=unix:///var/run/docker.sock
+## Development
 
-# Frontend Configuration
-NEXT_PUBLIC_API_URL=http://localhost:5000
-NODE_ENV=development
+### Adding a challenge
 
-# Session Timeouts
-SESSION_TIMEOUT=1800             # 30 minutes in seconds
-MAX_CONCURRENT_SESSIONS=5        # Per user
+The easiest way is the **Import** page in the UI (JSON definition, or a ZIP with a `Dockerfile` and `config.json`). To add one to the repository instead, follow [CHALLENGE_DEVELOPMENT.md](CHALLENGE_DEVELOPMENT.md). In short:
 
-# Monitoring
-PROMETHEUS_RETENTION_TIME=15d
-GF_SECURITY_ADMIN_PASSWORD=admin
-```
+1. Create `challenges/<name>/` with a `Dockerfile` and the app. Read the flag from `CHALLENGE_FLAG`; write runtime files under `/app/runtime` (the rest of the filesystem is read-only).
+2. Add the definition to [`challenges/definitions/challenges.json`](challenges/definitions/challenges.json) with `build_context` pointing at the folder.
+3. Check it with `python scripts/validate-challenge.py challenges/definitions/challenges.json`.
 
-### Security Profile Customization
-
-Edit `security/container-profiles.json`:
-
-```json
-{
-  "challenge": {
-    "capDrop": ["ALL"],
-    "capAdd": ["CHOWN", "DAC_OVERRIDE"],
-    "readOnlyRootfs": true,
-    "securityOpts": ["no-new-privileges:true"],
-    "user": "1000:1000"
-  }
-}
-```
-
-## Troubleshooting
-
-### Container Won't Start
+### Tests
 
 ```bash
-# Check Docker daemon
-sudo systemctl status docker
-
-# Check Docker socket permissions
-ls -l /var/run/docker.sock
-
-# View API logs
-docker logs dvc-api
+pip install -r api/requirements.txt pytest
+FLAG_SECRET_KEY=$(openssl rand -hex 32) pytest
+cd frontend && npm ci && npm run lint && npx tsc --noEmit
 ```
 
-### API Connection Failed
+CI runs the same checks on every push and pull request.
+
+### Running without Compose
 
 ```bash
-# Verify API is running
-curl http://localhost:5000/api/health
-
-# Check API container status
-docker ps | grep dvc-api
-
-# Check CORS configuration in api/app.py
+export FLAG_SECRET_KEY=$(openssl rand -hex 32)
+(cd api && python app.py)            # API on 127.0.0.1:5000 (FLASK_DEBUG=1 for the debugger)
+(cd frontend && npm install && npm run dev)
 ```
 
-### Challenge Image Not Found
+### Troubleshooting
 
-```bash
-# Build challenge images
-docker build -t dvc/challenge-name:latest challenges/challenge-name/
+- **`FLAG_SECRET_KEY is not set`**: run `./start.sh`, or add a key to `.env`.
+- **A challenge won't start**: `docker compose logs api` shows image build errors.
+- **The UI can't reach the API**: check `docker compose ps` and that `HOST` matches the hostname in your browser.
 
-# OR build all challenges
-for dir in challenges/*/; do
-  name=$(basename "$dir")
-  docker build -t "dvc/$name:latest" "$dir"
-done
+## Project structure
+
 ```
-
-### Frontend Not Loading
-
-```bash
-# Check if frontend container is running
-docker ps | grep dvc-frontend
-
-# Check frontend logs
-docker logs dvc-frontend
-
-# Verify API_URL environment variable
-docker exec dvc-frontend env | grep API_URL
+api/          Flask app: routes for challenges, flags, hints, import
+engine/       Orchestrator, session manager, flag system, hint service, port proxy image
+challenges/   Challenge definitions and challenge sources
+frontend/     Next.js UI
+security/     Container security profiles
+monitoring/   Prometheus and Grafana configuration
+scripts/      Validation and maintenance scripts
+tests/        Python tests
 ```
-
-## Security Considerations
-
-### For Challenge Developers
-
-- **Never expose host filesystem**: Don't mount sensitive directories into challenge containers
-- **Network isolation**: Challenges run in isolated bridge networks by default
-- **Flag placement**: Embed flags in application code, not environment variables (users can inspect)
-- **Resource limits**: Always define memory/CPU limits to prevent resource exhaustion
-- **Minimal images**: Use slim base images to reduce attack surface
-
-### For Users
-
-- **Run locally only**: Never expose ports 3000, 3001, 5000, 9090 to the internet
-- **Understand vulnerabilities**: Read challenge descriptions before spawning
-- **Isolated network**: Challenge containers can't access your host filesystem
-- **Auto-cleanup**: Containers auto-stop after timeout, but manually clean up with `docker-compose down`
-
-## Contributing
-
-This is a learning platform. Contributions welcome:
-
-- **Add new challenges**: See [CHALLENGE_DEVELOPMENT.md](CHALLENGE_DEVELOPMENT.md) for detailed guide
-- **Use Import Wizard**: Upload challenges via the web interface at http://localhost:3000/import
-- **Improve security profiles**: Enhance container hardening configurations
-- **Enhance monitoring dashboards**: Add Grafana visualizations (when monitoring is enabled)
-- **Write documentation**: Help others understand the platform
-- **Report bugs**: Open issues for any problems found
-
-### Adding Challenges
-
-There are two ways to add challenges:
-
-1. **Via Import Wizard (Easiest)**
-   - Navigate to http://localhost:3000/import
-   - Click the "Guide" tab for step-by-step instructions
-   - Upload a ZIP file with your challenge
-
-2. **Via Code (Advanced)**
-   - Read [CHALLENGE_DEVELOPMENT.md](CHALLENGE_DEVELOPMENT.md) for comprehensive guide
-   - Create challenge directory in `challenges/`
-   - Add entry to `challenges/definitions/challenges.json`
-   - Build and test locally
 
 ## License
 
-Educational use only. Not for production security training.
-
----
-
-**Local-First** • **Privacy-Preserving**
+[MIT](LICENSE). The challenges are intentionally vulnerable; only run them on a machine you control.

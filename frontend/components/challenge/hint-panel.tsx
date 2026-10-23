@@ -188,7 +188,7 @@ function EmptyHintsState() {
     <div className="text-center py-8 text-muted-foreground">
       <Lightbulb className="w-12 h-12 mx-auto mb-3 opacity-50" />
       <h3 className="font-medium mb-1">No hints available</h3>
-      <p className="text-sm">This challenge doesn't include hints.</p>
+      <p className="text-sm">This challenge doesn&apos;t include hints.</p>
     </div>
   );
 }

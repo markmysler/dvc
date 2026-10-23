@@ -61,11 +61,24 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         'TESTING': False,
         'JSON_SORT_KEYS': False,
         'JSONIFY_PRETTYPRINT_REGULAR': True if os.getenv('FLASK_ENV') == 'development' else False,
+        # Largest accepted request body (challenge ZIP uploads); larger -> 413
+        'MAX_CONTENT_LENGTH': 20 * 1024 * 1024,
     })
 
     # Apply custom config if provided
     if config:
         app.config.update(config)
+
+    # Fail fast without a real flag key: generation and validation must share it,
+    # and a default key would let players forge flags
+    from engine.flag_system import get_flag_secret_key
+    get_flag_secret_key()
+
+    # Prometheus metrics at /metrics (flask_http_request_* used by the Grafana
+    # API dashboard). A registry per app keeps repeated create_app calls safe.
+    from prometheus_client import CollectorRegistry
+    from prometheus_flask_exporter import PrometheusMetrics
+    PrometheusMetrics(app, group_by='endpoint', registry=CollectorRegistry(auto_describe=True))
 
     # Configure CORS for frontend integration
     host = os.getenv('HOST', 'localhost')
@@ -201,25 +214,38 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
             'endpoints': {
                 'challenges': '/api/challenges',
                 'flags': '/api/flags',
+                'hints': '/api/hints',
+                'import': '/api/import',
                 'health': '/api/health'
             },
-            'documentation': 'https://github.com/your-org/dvc'
+            'documentation': 'https://github.com/markmysler/dvc'
         })
 
     # Register blueprints
     import challenges
     import flags
     import import_handler
+    import hints
 
     app.register_blueprint(challenges.bp)
     app.register_blueprint(flags.flags_bp)
     app.register_blueprint(import_handler.bp)
+    app.register_blueprint(hints.bp)
+
+    # Container lifecycle: ending a session (expiry, solve, stop) also stops
+    # its container, and a reaper removes expired challenge containers that
+    # have no session (e.g. sessions lost when the API restarted)
+    from engine.session_manager import get_session_manager, CLEANUP_INTERVAL
+    orchestrator = challenges.get_orchestrator()
+    get_session_manager().container_stopper = (
+        lambda container_id: orchestrator.stop_challenge(container_id, force=True)
+    )
+    if not app.config.get('TESTING'):
+        _start_container_reaper(orchestrator, CLEANUP_INTERVAL)
 
     # Validate sessions against running containers on startup
     try:
-        from engine.session_manager import get_session_manager
         session_manager = get_session_manager()
-        orchestrator = challenges.get_orchestrator()
         cleaned = session_manager.validate_sessions_against_containers(orchestrator)
         if cleaned > 0:
             logger.info(f"Startup health check: cleaned {cleaned} stale session(s)")
@@ -236,17 +262,37 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     return app
 
 
+def _start_container_reaper(orchestrator, interval: int) -> None:
+    """Periodically stop challenge containers whose timeout label has passed"""
+    def reap():
+        try:
+            cleaned = orchestrator.cleanup_expired()
+            if cleaned:
+                logger.info(f"Reaper stopped {cleaned} expired challenge container(s)")
+        except Exception as e:
+            logger.error(f"Container reaper failed: {e}")
+        finally:
+            timer = threading.Timer(interval, reap)
+            timer.daemon = True
+            timer.start()
+
+    reap()
+
+
 # Import time module for timing functionality
+import threading
 import time
 
 # Create default app instance for development
 app = create_app()
 
 if __name__ == '__main__':
-    # Development server
+    # Local development only; the container runs gunicorn (see Dockerfile).
+    # The Werkzeug debugger allows code execution, so it is opt-in and never
+    # enabled in the image, which holds the Docker socket.
     app.run(
-        host='0.0.0.0',
+        host='127.0.0.1',
         port=5000,
-        debug=True,
+        debug=os.getenv('FLASK_DEBUG') == '1',
         threaded=True
     )

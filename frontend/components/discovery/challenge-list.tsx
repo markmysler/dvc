@@ -385,7 +385,7 @@ export function ChallengeList({
           <Package className="w-4 h-4" />
           <AlertDescription>
             <strong>Want to add custom challenges?</strong> Use the import feature to add your own challenge definitions.
-            They'll appear here alongside the built-in challenges with the same functionality.
+            They&apos;ll appear here alongside the built-in challenges with the same functionality.
           </AlertDescription>
         </Alert>
       )}

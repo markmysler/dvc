@@ -3,57 +3,8 @@
     {
       "category": "web",
       "container_spec": {
-        "environment": {
-          "FLAG": "FLAG{xss_vulnerabilities_are_dangerous_83f2a1}",
-          "NODE_ENV": "challenge",
-          "PORT": "3000"
-        },
-        "image": "dvc/web-basic-xss:latest",
-        "ports": {
-          "3000": null
-        },
-        "resource_limits": {
-          "cpus": "0.5",
-          "memory": "256m",
-          "pids_limit": 128
-        },
-        "security_profile": "challenge"
-      },
-      "build_context": "challenges/web-basic-xss",
-      "description": "A simple web application vulnerable to cross-site scripting (XSS) attacks. Learn to identify and exploit reflected XSS vulnerabilities.",
-      "difficulty": "beginner",
-      "id": "web-basic-xss",
-      "metadata": {
-        "author": "Security Practice Platform",
-        "created": "2026-01-28",
-        "estimated_time": "15-30 minutes",
-        "hints": [
-          "Look for user input that is reflected back in the page without proper sanitization",
-          "Try entering JavaScript code in the search form",
-          "The flag is revealed when XSS successfully executes"
-        ],
-        "learning_objectives": [
-          "Identify XSS vulnerabilities in web forms",
-          "Craft basic XSS payloads",
-          "Understand the impact of reflected XSS"
-        ],
-        "solution_url": "/challenges/web-basic-xss/solution.md",
-        "version": "1.0"
-      },
-      "name": "Basic XSS Challenge",
-      "points": 100,
-      "tags": [
-        "xss",
-        "web",
-        "javascript",
-        "injection"
-      ]
-    },
-    {
-      "category": "web",
-      "container_spec": {
         "environment": {},
-        "image": "sec-prac/path-traversal:latest",
+        "image": "dvc/web-path-traversal:latest",
         "ports": {
           "5000": null
         },
@@ -69,20 +20,20 @@
       "difficulty": "beginner",
       "id": "web-path-traversal",
       "metadata": {
-        "author": "Security Practice Platform",
+        "author": "Mark Mysler",
         "created": "2026-01-29",
         "estimated_time": "20-30 minutes",
         "hints": [
-          "The application allows viewing files, but doesn't properly validate paths",
-          "Try using '../' sequences to navigate up directories",
-          "The flag is stored in a file at /app/flag.txt"
+          "The application lets you download files, but doesn't properly validate the requested path",
+          "Try using '../' sequences to move up out of the public files directory",
+          "The flag is stored in a file called flag.txt in /app/runtime"
         ],
         "learning_objectives": [
           "Understand path traversal vulnerabilities",
           "Learn directory navigation techniques",
           "Practice exploiting insecure file access controls"
         ],
-        "version": "1.0"
+        "version": "1.1"
       },
       "name": "Path Traversal Challenge",
       "points": 150,

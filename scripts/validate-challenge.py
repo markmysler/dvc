@@ -10,7 +10,7 @@ import os
 import json
 import argparse
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, Tuple
 
 # Add parent directory to path to import validation logic
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))

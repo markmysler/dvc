@@ -9,12 +9,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY app.py .
 
-# Note: Flag is written by the app at startup from CHALLENGE_FLAG env var
-# This ensures each instance gets a unique, verifiable flag
-# Flag will be written to /app/flag.txt (owned by challenge user)
-
-# Create files directory
-RUN mkdir -p /app/files
+# Public files served by the app. The flag is written at runtime to
+# /app/runtime/flag.txt (a tmpfs; the root filesystem is read-only).
+RUN mkdir -p /app/files /app/runtime && \
+    echo 'This is a public document.' > /app/files/document1.txt && \
+    echo 'Another safe file.' > /app/files/document2.txt && \
+    printf '%s\n' '# File Server' 'Download files from the list below.' > /app/files/README.md
 
 # Create a non-root user
 RUN useradd -m -u 1000 challenge && \

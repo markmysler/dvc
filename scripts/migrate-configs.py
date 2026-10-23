@@ -7,7 +7,6 @@ Consolidates challenge configurations into single source of truth.
 """
 
 import json
-import os
 import argparse
 import shutil
 import sys
@@ -17,7 +16,7 @@ from typing import Dict, List, Any, Optional
 
 # Try to import colorama for colored output
 try:
-    from colorama import init, Fore, Back, Style
+    from colorama import init, Fore, Style
     init()
     HAS_COLOR = True
 except ImportError:
@@ -303,7 +302,7 @@ class ConfigMigrator:
                 self._print_success(f"Will migrate '{challenge_id}' from {config_path}")
 
             # Show migration summary
-            self._print(f"\nMigration Summary:")
+            self._print("\nMigration Summary:")
             self._print(f"  Individual configs found: {len(individual_configs)}")
             self._print(f"  Configs to add: {len(added_configs)}")
             self._print(f"  Configs skipped (duplicates): {len(skipped_configs)}")
@@ -364,11 +363,11 @@ class ConfigMigrator:
     def generate_report(self, migration_result: Dict[str, Any]) -> None:
         """Generate detailed migration report"""
         self._print(f"\n{'='*60}")
-        self._print(f"MIGRATION REPORT")
+        self._print("MIGRATION REPORT")
         self._print(f"{'='*60}")
         self._print(f"Status: {migration_result['status'].upper()}")
         self._print(f"Timestamp: {datetime.now().isoformat()}")
-        self._print(f"")
+        self._print("")
         self._print(f"Files processed: {migration_result['processed']}")
         self._print(f"Configurations added: {migration_result['added']}")
         self._print(f"Configurations skipped: {migration_result['skipped']}")

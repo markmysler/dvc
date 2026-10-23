@@ -9,7 +9,7 @@ Eliminates duplicate config.json files and provides single source of truth.
 import json
 import os
 import logging
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from pathlib import Path
 from datetime import datetime
 
@@ -44,7 +44,9 @@ class ConfigManager:
         """
         self.master_config_path = Path(master_config_path)
         self.challenges_base_path = Path(challenges_base_path)
-        self.imported_config_path = Path('/app/data/imported/imported_challenges.json')
+        self.imported_config_path = (
+            Path(os.environ.get('IMPORTED_CHALLENGES_DIR', '/app/data/imported')) / 'imported_challenges.json'
+        )
 
         # Configuration cache
         self._config_cache: Dict[str, Dict] = {}
@@ -129,11 +131,24 @@ class ConfigManager:
             if challenge_id:
                 self._config_cache[challenge_id] = challenge.copy()
 
-        # Add challenges from imported config (overwrites if same ID)
+        # Add challenges from imported config. Imports can't replace built-in
+        # challenges, and can only build from their own extracted ZIP folder.
+        import_root = self.imported_config_path.parent.resolve()
         for challenge in self._imported_config.get('challenges', []):
             challenge_id = challenge.get('id')
-            if challenge_id:
-                self._config_cache[challenge_id] = challenge.copy()
+            if not challenge_id:
+                continue
+            if challenge_id in self._config_cache:
+                logger.warning(f"Ignoring imported challenge {challenge_id}: ID is built in")
+                continue
+            challenge = challenge.copy()
+            build_context = challenge.get('build_context')
+            if build_context:
+                resolved = Path(build_context).resolve()
+                if resolved == import_root or import_root not in resolved.parents:
+                    logger.warning(f"Ignoring build_context outside import dir for {challenge_id}")
+                    challenge.pop('build_context')
+            self._config_cache[challenge_id] = challenge
 
         # Check for individual config files (backward compatibility)
         self._load_individual_configs()

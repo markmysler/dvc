@@ -262,7 +262,7 @@ export function SkillTracking({ challenges, skillProgress }: SkillTrackingProps)
                   <div className="text-center py-2">
                     <div className="inline-flex items-center gap-2 text-purple-600 font-medium">
                       <Trophy className="h-4 w-4" />
-                      Congratulations! You've mastered {skill.category}!
+                      Congratulations! You&apos;ve mastered {skill.category}!
                     </div>
                   </div>
                 )}

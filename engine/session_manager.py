@@ -23,8 +23,8 @@ import threading
 import time
 import uuid
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, asdict
 
 # Configure logging
@@ -53,6 +53,7 @@ class SessionInfo:
     instance_data: Optional[str] = None  # Unique instance data for flag generation
     status: str = "active"  # active, expired, stopped
     health_status: str = "unknown"  # unknown, healthy, unhealthy, starting, none
+    hints_requested: int = 0  # hints unlocked early on request (see hint_service)
 
 
 class SessionManagerError(Exception):
@@ -90,6 +91,10 @@ class SessionManager:
         self._user_sessions: Dict[str, List[str]] = {}  # user_id -> [session_ids]
         self._lock = threading.RLock()
         self._cleanup_timer: Optional[threading.Timer] = None
+        # Called with a container ID whenever a session ends (expiry, solve,
+        # explicit stop) so containers never outlive their session. Set by the
+        # API to the orchestrator's stop function.
+        self.container_stopper: Optional[Callable[[str], Any]] = None
 
         # Start automatic cleanup
         self._schedule_cleanup()
@@ -231,12 +236,28 @@ class SessionManager:
 
             return asdict(session_info)
 
-    def cleanup_session(self, session_id: str) -> bool:
+    def set_hints_requested(self, session_id: str, count: int) -> bool:
+        """Record how many hints the session has unlocked by request"""
+        with self._lock:
+            session_info = self._sessions.get(session_id)
+            if not session_info:
+                return False
+            session_info.hints_requested = max(session_info.hints_requested, count)
+            return True
+
+    def has_capacity(self, user_id: str) -> bool:
+        """Whether the user can start another session (check before spawning)"""
+        with self._lock:
+            return len(self._user_sessions.get(user_id, [])) < self.max_sessions_per_user
+
+    def cleanup_session(self, session_id: str, stop_container: bool = True) -> bool:
         """
         Remove session and stop associated container.
 
         Args:
             session_id: Session identifier to cleanup
+            stop_container: Also stop the session's container via
+                container_stopper (False when the caller already stopped it)
 
         Returns:
             True if session was found and cleaned, False otherwise
@@ -262,11 +283,19 @@ class SessionManager:
                 del self._sessions[session_id]
 
                 logger.info(f"Cleaned up session {session_id} for user {session_info.user_id}")
-                return True
 
             except Exception as e:
                 logger.error(f"Error cleaning up session {session_id}: {e}")
                 return False
+
+        # Stop the container outside the lock (it can take several seconds)
+        if stop_container and self.container_stopper and session_info.container_id:
+            try:
+                self.container_stopper(session_info.container_id)
+            except Exception as e:
+                logger.error(f"Failed to stop container for session {session_id}: {e}")
+
+        return True
 
     def list_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
         """
@@ -370,18 +399,17 @@ class SessionManager:
         cleaned_count = 0
         current_time = time.time()
 
+        # Find expired sessions under the lock, clean them up (and stop their
+        # containers) without holding it
         with self._lock:
-            expired_session_ids = []
+            expired_session_ids = [
+                session_id for session_id, session_info in self._sessions.items()
+                if current_time > session_info.expires_at
+            ]
 
-            # Find expired sessions
-            for session_id, session_info in self._sessions.items():
-                if current_time > session_info.expires_at:
-                    expired_session_ids.append(session_id)
-
-            # Clean up expired sessions
-            for session_id in expired_session_ids:
-                if self.cleanup_session(session_id):
-                    cleaned_count += 1
+        for session_id in expired_session_ids:
+            if self.cleanup_session(session_id):
+                cleaned_count += 1
 
         if cleaned_count > 0:
             logger.info(f"Cleaned up {cleaned_count} expired sessions")
@@ -417,7 +445,7 @@ class SessionManager:
 
     def _generate_session_id(self) -> str:
         """Generate unique session identifier"""
-        return str(uuid.uuid4())[:8]
+        return uuid.uuid4().hex  # 128 bits: session IDs act as capabilities
 
     def validate_sessions_against_containers(self, orchestrator) -> int:
         """

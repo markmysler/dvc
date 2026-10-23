@@ -21,9 +21,8 @@ Security considerations:
 import logging
 import os
 import time
-from typing import Dict, Any, List
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import BadRequest
 
 from engine.orchestrator import ChallengeOrchestrator, ChallengeError, ChallengeNotFoundError
@@ -92,7 +91,8 @@ def list_challenges():
                 'points': challenge_data.get('points', 0),
                 'estimated_time': metadata.get('estimated_time', '30 minutes'),
                 'imported': challenge_data.get('imported', False),
-                'hints': metadata.get('hints', []),
+                # Hint text is served per session by /api/hints, not in the catalogue
+                'hint_count': len(metadata.get('hints', [])),
                 'learning_objectives': metadata.get('learning_objectives', []),
                 'author': metadata.get('author', 'Unknown'),
                 'version': metadata.get('version', '1.0')
@@ -195,6 +195,14 @@ def spawn_challenge():
                 'expires_at': existing_session['expires_at']
             })
 
+        # Check the per-user limit before spawning, so a rejected request
+        # never leaves a container running without a session
+        if not session_manager.has_capacity(user_id):
+            raise UserSessionLimitError(
+                f"User {user_id} has reached the maximum of "
+                f"{session_manager.max_sessions_per_user} running challenges"
+            )
+
         # Spawn challenge container
         orchestrator = get_orchestrator()
 
@@ -222,13 +230,18 @@ def spawn_challenge():
             'container_port': container_ports.get('80/tcp', container_ports.get('8080/tcp'))
         }
 
-        session_id = session_manager.create_session(
-            user_id=user_id,
-            challenge_id=challenge_id,
-            container_info=container_info,
-            session_timeout=session_timeout,
-            instance_data=instance_data
-        )
+        try:
+            session_id = session_manager.create_session(
+                user_id=user_id,
+                challenge_id=challenge_id,
+                container_info=container_info,
+                session_timeout=session_timeout,
+                instance_data=instance_data
+            )
+        except Exception:
+            # No session means nothing would ever stop this container
+            orchestrator.stop_challenge(container_id, force=True)
+            raise
 
         expires_at = time.time() + session_timeout
 
@@ -343,9 +356,16 @@ def stop_challenge(session_id: str):
                 'code': 404
             }), 404
 
+        # Only the session's owner may stop it
+        if request.args.get('user_id') != session_data['user_id']:
+            return jsonify({
+                'status': 'error',
+                'error': 'Session belongs to a different user (pass ?user_id=)',
+                'code': 403
+            }), 403
+
         container_id = session_data['container_id']
         challenge_id = session_data['challenge_id']
-        user_id = session_data['user_id']
 
         # Stop container via orchestrator
         orchestrator = get_orchestrator()
@@ -353,19 +373,19 @@ def stop_challenge(session_id: str):
         logger.info(f"Stopping challenge {challenge_id} container {container_id} (session: {session_id})")
         container_stopped = orchestrator.stop_challenge(container_id)
 
-        # Cleanup session regardless of container stop result
-        session_cleaned = session_manager.cleanup_session(session_id)
+        # Cleanup session regardless of container stop result (already stopped above)
+        session_cleaned = session_manager.cleanup_session(session_id, stop_container=False)
 
         if container_stopped and session_cleaned:
             message = f"Challenge {challenge_id} stopped successfully"
             status = 'success'
             status_code = 200
         elif session_cleaned:
-            message = f"Session cleaned up (container may have already been removed)"
+            message = "Session cleaned up (container may have already been removed)"
             status = 'success'
             status_code = 200
         else:
-            message = f"Failed to stop challenge"
+            message = "Failed to stop challenge"
             status = 'error'
             status_code = 500
 

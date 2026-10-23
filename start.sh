@@ -66,7 +66,8 @@ Description:
     This script will:
     1. Validate Docker and Docker Compose are installed
     2. Perform first-time setup (if needed)
-    3. Start the platform containers
+    3. Generate a random FLAG_SECRET_KEY in .env (if missing)
+    4. Start the platform containers and wait for them to be healthy
 
     By default, only the API and frontend containers are started for a 
     lightweight development experience. Use --monitor to enable the full 
@@ -76,9 +77,10 @@ Environment Setup:
     On first run, the script will:
     - Validate all dependencies are installed
     - Create required directories
-    - Build challenge Docker images
-    - Initialize the database
-    - Set up monitoring (if --monitor is used)
+    Challenge images are built on demand the first time each one is started.
+
+    All ports are bound to 127.0.0.1. Set DVC_BIND_ADDRESS (and HOST) to
+    expose the platform on another interface, e.g. a lab VM.
 
 EOF
     exit 0
@@ -191,6 +193,32 @@ first_time_setup() {
     print_success "First-time setup complete!"
 }
 
+# Make sure .env holds a random flag secret key (generation and validation share it)
+ensure_secret_key() {
+    if [ -f .env ] && grep -qE '^FLAG_SECRET_KEY=.{32,}' .env; then
+        print_success "Flag secret key found in .env"
+        return
+    fi
+
+    local key
+    if command_exists openssl; then
+        key=$(openssl rand -hex 32)
+    elif command_exists python3; then
+        key=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+    else
+        print_error "Need openssl or python3 to generate FLAG_SECRET_KEY"
+        exit 1
+    fi
+
+    # Replace a short/placeholder key if present, otherwise append
+    if [ -f .env ] && grep -q '^FLAG_SECRET_KEY=' .env; then
+        sed -i.bak '/^FLAG_SECRET_KEY=/d' .env && rm -f .env.bak
+    fi
+    echo "FLAG_SECRET_KEY=$key" >> .env
+    chmod 600 .env 2>/dev/null || true
+    print_success "Generated a random FLAG_SECRET_KEY in .env"
+}
+
 # Start the platform
 start_platform() {
     print_header "Starting DVC Platform"
@@ -203,9 +231,9 @@ start_platform() {
         
         print_success "All services started!"
         print_info "Access points:"
-        print_info "  - Frontend:   http://${HOST:-localhost}:3000"
+        print_info "  - Frontend:   http://${HOST:-localhost}:3001"
         print_info "  - API:        http://${HOST:-localhost}:5000"
-        print_info "  - Grafana:    http://${HOST:-localhost}:3001"
+        print_info "  - Grafana:    http://${HOST:-localhost}:3000"
         print_info "  - Prometheus: http://${HOST:-localhost}:9090"
     else
         print_info "Starting in LITE mode (API + Frontend only)..."
@@ -215,7 +243,7 @@ start_platform() {
         
         print_success "Core services started!"
         print_info "Access points:"
-        print_info "  - Frontend: http://${HOST:-localhost}:3000"
+        print_info "  - Frontend: http://${HOST:-localhost}:3001"
         print_info "  - API:      http://${HOST:-localhost}:5000"
         print_info ""
         print_info "💡 Tip: Use './start.sh --monitor' to enable Grafana and Prometheus"
@@ -305,7 +333,7 @@ check_health() {
             print_warning "Prometheus health check failed (may still be starting up)"
         fi
         
-        if curl -s -f http://${HOST:-localhost}:3001/api/health >/dev/null 2>&1; then
+        if curl -s -f http://${HOST:-localhost}:3000/api/health >/dev/null 2>&1; then
             print_success "Grafana is healthy"
         else
             print_warning "Grafana health check failed (may still be starting up)"
@@ -357,10 +385,13 @@ EOF
         print_info "Delete '$SETUP_MARKER' to re-run setup"
     fi
     
-    # Step 3: Start the platform
+    # Step 3: Make sure a flag secret key exists
+    ensure_secret_key
+
+    # Step 4: Start the platform
     start_platform
     
-    # Step 4: Health check
+    # Step 5: Health check
     if ! check_health; then
         print_error "Health check failed!"
         print_info "Platform started but some services are not healthy"
@@ -368,7 +399,7 @@ EOF
         exit 1
     fi
     
-    # Step 5: Show running containers
+    # Step 6: Show running containers
     show_containers
     
     # Final message

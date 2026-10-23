@@ -9,7 +9,7 @@ set -uo pipefail
 # Configuration
 TEST_IMAGE="alpine:latest"
 TEST_CONTAINER_NAME="security-test-$$"
-SECURITY_PROFILE="/home/mark/dvc/security/container-profiles.json"
+SECURITY_PROFILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/security/container-profiles.json"
 
 # Colors for output
 RED='\033[0;31m'

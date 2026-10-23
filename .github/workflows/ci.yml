@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: API and engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r api/requirements.txt pytest ruff
+
+      - name: Lint (syntax errors, undefined names, unused code)
+        run: ruff check api engine tests scripts --select E9,F
+
+      - name: Tests
+        run: |
+          export FLAG_SECRET_KEY=$(openssl rand -hex 32)
+          pytest -q
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  docker:
+    name: Docker images and compose file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: FLAG_SECRET_KEY=$(openssl rand -hex 32) docker compose config --quiet
+
+      - name: Build API image
+        run: docker build -t dvc-api:ci api
+
+      - name: Build port proxy image
+        run: docker build -t dvc/port-proxy:ci engine/proxy
+
+      - name: Build challenge images
+        run: |
+          for dir in challenges/*/; do
+            if [ -f "$dir/Dockerfile" ]; then
+              docker build -t "dvc-ci/$(basename "$dir")" "$dir"
+            fi
+          done

@@ -3,27 +3,21 @@ import os
 
 app = Flask(__name__)
 
-# Flag is stored in /app/flag.txt (writable by challenge user)
-FLAG_PATH = '/app/flag.txt'
+# The root filesystem is read-only; /app/runtime is a small writable tmpfs
+# owned by the challenge user (see security/container-profiles.json)
+RUNTIME_DIR = '/app/runtime'
+FLAG_PATH = os.path.join(RUNTIME_DIR, 'flag.txt')
 
-# Get flag from environment variable (injected by orchestrator)
-CHALLENGE_FLAG = os.environ.get('CHALLENGE_FLAG', 'DVC{default_flag_error}')
+# Unique per-instance flag injected by the orchestrator
+CHALLENGE_FLAG = os.environ.get('CHALLENGE_FLAG')
+if not CHALLENGE_FLAG:
+    raise SystemExit('CHALLENGE_FLAG is not set; start this challenge through DVC')
 
-# Write flag to file at startup
 with open(FLAG_PATH, 'w') as f:
     f.write(CHALLENGE_FLAG + '\n')
 
-# Safe files directory
+# Public files served by the app (baked into the image, see Dockerfile)
 FILES_DIR = '/app/files'
-
-# Create some safe files
-os.makedirs(FILES_DIR, exist_ok=True)
-with open(os.path.join(FILES_DIR, 'document1.txt'), 'w') as f:
-    f.write('This is a public document.\n')
-with open(os.path.join(FILES_DIR, 'document2.txt'), 'w') as f:
-    f.write('Another safe file.\n')
-with open(os.path.join(FILES_DIR, 'README.md'), 'w') as f:
-    f.write('# File Server\nDownload files from the list below.\n')
 
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
@@ -113,7 +107,7 @@ def download():
         return render_template_string(HTML_TEMPLATE, error="No file specified"), 400
     
     # VULNERABLE: Direct path concatenation without validation
-    # This allows path traversal attacks like: ?file=../../flag.txt
+    # This allows path traversal attacks like: ?file=../runtime/flag.txt
     file_path = os.path.join(FILES_DIR, filename)
     
     try:
