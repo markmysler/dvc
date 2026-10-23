@@ -68,7 +68,7 @@ class HintService:
     providing adaptive learning assistance while preserving challenge difficulty.
     """
 
-    def __init__(self, challenges_config_path: str = "/home/mark/dvc/challenges/definitions/challenges.json"):
+    def __init__(self, challenges_config_path: str = "challenges/definitions/challenges.json"):
         """
         Initialize hint service.
 
