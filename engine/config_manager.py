@@ -129,11 +129,24 @@ class ConfigManager:
             if challenge_id:
                 self._config_cache[challenge_id] = challenge.copy()
 
-        # Add challenges from imported config (overwrites if same ID)
+        # Add challenges from imported config. Imports can't replace built-in
+        # challenges, and can only build from their own extracted ZIP folder.
+        import_root = self.imported_config_path.parent.resolve()
         for challenge in self._imported_config.get('challenges', []):
             challenge_id = challenge.get('id')
-            if challenge_id:
-                self._config_cache[challenge_id] = challenge.copy()
+            if not challenge_id:
+                continue
+            if challenge_id in self._config_cache:
+                logger.warning(f"Ignoring imported challenge {challenge_id}: ID is built in")
+                continue
+            challenge = challenge.copy()
+            build_context = challenge.get('build_context')
+            if build_context:
+                resolved = Path(build_context).resolve()
+                if resolved == import_root or import_root not in resolved.parents:
+                    logger.warning(f"Ignoring build_context outside import dir for {challenge_id}")
+                    challenge.pop('build_context')
+            self._config_cache[challenge_id] = challenge
 
         # Check for individual config files (backward compatibility)
         self._load_individual_configs()

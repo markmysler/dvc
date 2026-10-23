@@ -61,6 +61,8 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         'TESTING': False,
         'JSON_SORT_KEYS': False,
         'JSONIFY_PRETTYPRINT_REGULAR': True if os.getenv('FLASK_ENV') == 'development' else False,
+        # Largest accepted request body (challenge ZIP uploads); larger -> 413
+        'MAX_CONTENT_LENGTH': 20 * 1024 * 1024,
     })
 
     # Apply custom config if provided

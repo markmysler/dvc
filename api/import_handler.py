@@ -12,6 +12,7 @@ import logging
 import time
 from typing import Dict, Any, List, Tuple
 from flask import Blueprint, request, jsonify
+from werkzeug.exceptions import RequestEntityTooLarge
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -22,6 +23,84 @@ bp = Blueprint('import', __name__, url_prefix='/api/import')
 # Validation constants
 VALID_DIFFICULTIES = ['beginner', 'easy', 'medium', 'hard', 'expert']
 VALID_CATEGORIES = ['web', 'crypto', 'reverse', 'pwn', 'forensics', 'misc', 'cloud', 'mobile', 'hardware']
+
+# Where imported challenges (definitions + extracted ZIPs) live
+IMPORT_DIR = os.environ.get('IMPORTED_CHALLENGES_DIR', '/app/data/imported')
+
+# Upload limits (the request size itself is capped by MAX_CONTENT_LENGTH in app.py)
+MAX_ZIP_ENTRIES = 2000
+MAX_ZIP_UNCOMPRESSED_BYTES = 100 * 1024 * 1024  # 100 MB
+
+# Upper bounds for imported challenge resources
+MAX_MEMORY_BYTES = 1024 * 1024 * 1024  # 1 GB
+MAX_CPUS = 2.0
+MAX_PIDS = 512
+
+# State-changing requests must carry this header. Browsers only send custom
+# headers cross-origin after a CORS preflight, which only the frontend's
+# origins pass, so other websites cannot import challenges (CSRF).
+CSRF_HEADER = 'X-DVC-Request'
+
+
+def _parse_memory(value: Any) -> int:
+    """Parse a Docker memory string like '512m' or '1g' into bytes"""
+    match = re.fullmatch(r'(\d+(?:\.\d+)?)\s*([kmg]?)b?', str(value).strip().lower())
+    if not match:
+        raise ValueError(f'invalid memory value: {value}')
+    number, unit = float(match.group(1)), match.group(2)
+    return int(number * {'': 1, 'k': 1024, 'm': 1024 ** 2, 'g': 1024 ** 3}[unit])
+
+
+def _validate_resource_limits(challenge: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Reject resource limits above the platform's caps"""
+    errors = []
+    limits = (challenge.get('container_spec') or {}).get('resource_limits') or {}
+
+    def error(field: str, message: str) -> None:
+        errors.append({
+            'path': f'container_spec.resource_limits.{field}',
+            'message': message,
+            'suggestion': 'Lower the limit; imported challenges are capped at '
+                          f'1g memory, {MAX_CPUS:g} CPUs and {MAX_PIDS} processes',
+            'severity': 'error'
+        })
+
+    if 'memory' in limits:
+        try:
+            if _parse_memory(limits['memory']) > MAX_MEMORY_BYTES:
+                error('memory', f'Memory limit {limits["memory"]} is above 1g')
+        except ValueError as e:
+            error('memory', str(e))
+    if 'cpus' in limits:
+        try:
+            if float(limits['cpus']) > MAX_CPUS:
+                error('cpus', f'CPU limit {limits["cpus"]} is above {MAX_CPUS:g}')
+        except (TypeError, ValueError):
+            error('cpus', f'invalid cpus value: {limits["cpus"]}')
+    if 'pids_limit' in limits:
+        if not isinstance(limits['pids_limit'], int) or not 0 < limits['pids_limit'] <= MAX_PIDS:
+            error('pids_limit', f'pids_limit must be an integer between 1 and {MAX_PIDS}')
+    return errors
+
+
+def _check_zip_safety(zf: zipfile.ZipFile) -> None:
+    """Refuse ZIPs that are too large when extracted or contain unsafe paths"""
+    entries = zf.infolist()
+    if len(entries) > MAX_ZIP_ENTRIES:
+        raise ValueError(f'ZIP has too many files (limit {MAX_ZIP_ENTRIES})')
+    if sum(e.file_size for e in entries) > MAX_ZIP_UNCOMPRESSED_BYTES:
+        raise ValueError('ZIP is too large when extracted (limit 100 MB)')
+    for entry in entries:
+        name = entry.filename.replace('\\', '/')
+        if name.startswith('/') or '..' in name.split('/') or ':' in name:
+            raise ValueError(f'ZIP contains an unsafe path: {entry.filename}')
+
+
+def _is_inside_import_dir(path: str) -> bool:
+    """True if path is a subdirectory of IMPORT_DIR (never IMPORT_DIR itself)"""
+    root = os.path.realpath(IMPORT_DIR)
+    target = os.path.realpath(path)
+    return target != root and os.path.commonpath([root, target]) == root
 
 
 def validate_challenge(challenge: Dict[str, Any]) -> Dict[str, Any]:
@@ -109,7 +188,10 @@ def validate_challenge(challenge: Dict[str, Any]) -> Dict[str, Any]:
                 'message': 'Description is very short',
                 'severity': 'warning'
             })
-    
+
+    # Validate resource limits against the platform caps
+    errors.extend(_validate_resource_limits(challenge))
+
     return {
         'valid': len(errors) == 0,
         'errors': errors,
@@ -128,6 +210,8 @@ def extract_config_from_zip(zip_path: str) -> Tuple[Dict[str, Any], str]:
         Tuple of (config_data, config_filename)
     """
     with zipfile.ZipFile(zip_path, 'r') as zf:
+        _check_zip_safety(zf)
+
         # Look for config.json or challenge.json
         config_file = None
         for filename in zf.namelist():
@@ -158,6 +242,12 @@ def import_challenge():
         JSON response with validation results
     """
     logger.info("=== Import challenge endpoint called ===")
+    if request.headers.get(CSRF_HEADER) != '1':
+        return jsonify({
+            'success': False,
+            'error': f'Missing {CSRF_HEADER} header'
+        }), 403
+
     try:
         # Check if file was uploaded
         logger.info(f"Request files: {list(request.files.keys())}")
@@ -280,7 +370,7 @@ def import_challenge():
             # If validation passed, save challenges to imported challenges file
             if not has_errors:
                 logger.info("Saving challenges to imported file")
-                import_dir = '/app/data/imported'
+                import_dir = IMPORT_DIR
                 os.makedirs(import_dir, exist_ok=True)
                 
                 # For ZIP files, extract all contents for building
@@ -293,18 +383,26 @@ def import_challenge():
                     
                     logger.info(f"Extracting ZIP to {extract_dir}")
                     with zipfile.ZipFile(temp_path, 'r') as zf:
+                        _check_zip_safety(zf)
                         zf.extractall(extract_dir)
                     
                     challenge_build_path = extract_dir
                     logger.info(f"Extracted challenge files to {extract_dir}")
                 
-                # Add build path to challenge metadata
+                # Add build path to challenge metadata. A user-supplied
+                # build_context is never trusted (it is later used for image
+                # builds and deleted with rmtree); only ZIP imports get one,
+                # pointing at their own extraction directory.
                 for challenge in challenges:
                     challenge['imported'] = True
                     challenge['import_source'] = 'user_upload'
                     challenge['imported_at'] = time.time()
+                    challenge.pop('build_context', None)
                     if challenge_build_path:
                         challenge['build_context'] = challenge_build_path
+                    # Imported challenges always run with the hardened profile
+                    if isinstance(challenge.get('container_spec'), dict):
+                        challenge['container_spec']['security_profile'] = 'challenge'
                 
                 import_file = os.path.join(import_dir, 'imported_challenges.json')
                 
@@ -367,6 +465,12 @@ def import_challenge():
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
     
+    except RequestEntityTooLarge:
+        return jsonify({
+            'success': False,
+            'error': 'File is too large (limit 20 MB)'
+        }), 413
+
     except json.JSONDecodeError as e:
         logger.error(f'JSON decode error: {e}')
         return jsonify({
@@ -396,7 +500,7 @@ def delete_imported_challenge(challenge_id: str):
     logger.info(f"=== Delete imported challenge: {challenge_id} ===")
     try:
         # Get imported challenges directory
-        imported_dir = os.environ.get('IMPORTED_CHALLENGES_DIR', '/app/data/imported')
+        imported_dir = IMPORT_DIR
         imported_json_path = os.path.join(imported_dir, 'imported_challenges.json')
         
         # Load imported challenges
@@ -434,11 +538,15 @@ def delete_imported_challenge(challenge_id: str):
         with open(imported_json_path, 'w') as f:
             json.dump({'challenges': updated_challenges}, f, indent=2)
         
-        # Delete challenge directory if it exists
+        # Delete the extracted ZIP directory, but only if it really is inside
+        # the import directory (older imports could store any build_context)
         if challenge_dir and os.path.exists(challenge_dir):
-            import shutil
-            shutil.rmtree(challenge_dir)
-            logger.info(f"Deleted challenge directory: {challenge_dir}")
+            if _is_inside_import_dir(challenge_dir):
+                import shutil
+                shutil.rmtree(challenge_dir)
+                logger.info(f"Deleted challenge directory: {challenge_dir}")
+            else:
+                logger.warning(f"Not deleting {challenge_dir}: outside {IMPORT_DIR}")
         
         # Reload challenges in orchestrator
         try:
