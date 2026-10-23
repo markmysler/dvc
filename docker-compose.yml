@@ -22,7 +22,6 @@ services:
       - FLAG_SECRET_KEY=${FLAG_SECRET_KEY:?FLAG_SECRET_KEY is not set - run ./start.sh to generate one in .env}
     networks:
       - monitoring
-      - challenges
     security_opt:
       - no-new-privileges:true
     cap_add:
@@ -193,10 +192,5 @@ networks:
       config:
         - subnet: 172.20.0.0/16
           gateway: 172.20.0.1
-  challenges:
-    driver: bridge
-    internal: false
-    ipam:
-      config:
-        - subnet: 172.21.0.0/16
-          gateway: 172.21.0.1
+  # Challenge containers do not use a compose network: the orchestrator
+  # creates "dvc-challenges" (no outbound NAT, no inter-container traffic)

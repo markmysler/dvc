@@ -4,7 +4,9 @@
     "securityOpts": [
       "no-new-privileges:true"
     ],
-    "capDrop": ["ALL"],
+    "capDrop": [
+      "ALL"
+    ],
     "capAdd": [],
     "user": "1000:1000",
     "readOnlyRootfs": true,
@@ -28,19 +30,21 @@
     }
   },
   "challenge": {
-    "description": "Security profile for challenge containers with minimal required capabilities",
+    "description": "Security profile for challenge containers: no capabilities, Docker's default seccomp profile, read-only root filesystem with small writable tmpfs mounts. Challenges write runtime data (e.g. the flag file) under /app/runtime.",
     "securityOpts": [
-      "no-new-privileges:true",
-      "seccomp=unconfined"
+      "no-new-privileges:true"
     ],
-    "capDrop": ["ALL"],
-    "capAdd": ["CHOWN", "DAC_OVERRIDE"],
+    "capDrop": [
+      "ALL"
+    ],
+    "capAdd": [],
     "user": "1000:1000",
-    "readOnlyRootfs": false,
+    "readOnlyRootfs": true,
     "tmpfs": {
-      "/tmp": "rw,noexec,nosuid,size=200m",
-      "/var/tmp": "rw,noexec,nosuid,size=100m",
-      "/run": "rw,noexec,nosuid,size=100m"
+      "/tmp": "rw,noexec,nosuid,size=64m",
+      "/var/tmp": "rw,noexec,nosuid,size=16m",
+      "/run": "rw,noexec,nosuid,size=16m",
+      "/app/runtime": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000,mode=0755"
     },
     "sysctls": {
       "net.ipv4.ip_unprivileged_port_start": "0"
@@ -66,8 +70,12 @@
     "securityOpts": [
       "no-new-privileges:true"
     ],
-    "capDrop": ["ALL"],
-    "capAdd": ["NET_BIND_SERVICE"],
+    "capDrop": [
+      "ALL"
+    ],
+    "capAdd": [
+      "NET_BIND_SERVICE"
+    ],
     "user": "65534:65534",
     "readOnlyRootfs": true,
     "tmpfs": {
