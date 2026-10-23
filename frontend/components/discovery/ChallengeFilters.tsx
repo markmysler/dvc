@@ -319,7 +319,7 @@ export function ChallengeFilters({
           <span>Active filters:</span>
           {filters.search && (
             <Badge variant="outline" className="text-xs">
-              Search: "{filters.search}"
+              Search: &quot;{filters.search}&quot;
               <X
                 className="h-3 w-3 ml-1 cursor-pointer"
                 onClick={() => updateFilter('search', '')}

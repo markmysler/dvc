@@ -58,13 +58,16 @@ class ChallengeOrchestrator:
 
     def __init__(self,
                  challenges_path: str = "challenges/definitions/challenges.json",
-                 security_profiles_path: str = "security/container-profiles.json"):
+                 security_profiles_path: str = "security/container-profiles.json",
+                 docker_client: Optional[DockerClient] = None):
         """
         Initialize the challenge orchestrator
 
         Args:
             challenges_path: Path to challenges definition file (for config manager)
             security_profiles_path: Path to security profiles configuration
+            docker_client: Docker client to use (tests pass a fake); connects
+                to the local Docker daemon when omitted
         """
         self.challenges_path = Path(challenges_path)
         self.security_profiles_path = Path(security_profiles_path)
@@ -76,33 +79,36 @@ class ChallengeOrchestrator:
         self.config_manager = ConfigManager(master_config_path=str(challenges_path))
 
         # Initialize Docker client with error handling
-        try:
-            # Try to connect via Docker socket (for containerized deployment)
-            import os
-            import traceback
-            if os.path.exists('/var/run/docker.sock'):
-                logger.info("Found Docker socket, initializing client...")
-                # Use APIClient for better compatibility with urllib3 < 2.0
-                from docker import APIClient
-                api_client = APIClient(base_url='unix:///var/run/docker.sock')
-                api_client.ping()
-                # Now create the high-level client
-                self.docker_client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
-            else:
-                logger.info("Docker socket not found, using environment...")
-                # Fallback to environment-based connection
-                self.docker_client = docker.from_env()
+        if docker_client is not None:
+            self.docker_client = docker_client
+        else:
+            try:
+                # Try to connect via Docker socket (for containerized deployment)
+                import os
+                import traceback
+                if os.path.exists('/var/run/docker.sock'):
+                    logger.info("Found Docker socket, initializing client...")
+                    # Use APIClient for better compatibility with urllib3 < 2.0
+                    from docker import APIClient
+                    api_client = APIClient(base_url='unix:///var/run/docker.sock')
+                    api_client.ping()
+                    # Now create the high-level client
+                    self.docker_client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
+                else:
+                    logger.info("Docker socket not found, using environment...")
+                    # Fallback to environment-based connection
+                    self.docker_client = docker.from_env()
 
-            self.docker_client.ping()
-            logger.info("Docker client initialized successfully")
-        except DockerException as e:
-            logger.error(f"Failed to initialize Docker client: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise ChallengeError(f"Docker connection failed: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error initializing Docker client: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            raise ChallengeError(f"Docker connection failed: {e}")
+                self.docker_client.ping()
+                logger.info("Docker client initialized successfully")
+            except DockerException as e:
+                logger.error(f"Failed to initialize Docker client: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise ChallengeError(f"Docker connection failed: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error initializing Docker client: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise ChallengeError(f"Docker connection failed: {e}")
 
         # Initialize health monitoring
         self.health_monitor = HealthMonitor(self.docker_client)
@@ -350,7 +356,7 @@ class ChallengeOrchestrator:
     def spawn_challenge(self,
                        challenge_id: str,
                        user_id: str,
-                       session_timeout: int = 3600) -> str:
+                       session_timeout: int = 3600) -> Tuple[str, str]:
         """
         Spawn a challenge container with security isolation
 
@@ -360,7 +366,7 @@ class ChallengeOrchestrator:
             session_timeout: Container lifetime in seconds (default 1 hour)
 
         Returns:
-            Container ID of spawned challenge
+            (container_id, instance_data); instance_data is needed to validate the flag
 
         Raises:
             ChallengeNotFoundError: If challenge ID not found
@@ -383,7 +389,7 @@ class ChallengeOrchestrator:
                 build_context = challenge.get('build_context')
                 if build_context and os.path.exists(build_context):
                     logger.info(f"Building challenge image on-demand from {build_context}")
-                    logger.info(f"This may take a minute on first spawn...")
+                    logger.info("This may take a minute on first spawn...")
                     try:
                         image, build_logs = self.docker_client.images.build(
                             path=build_context,
@@ -530,7 +536,6 @@ class ChallengeOrchestrator:
                 raise ChallengeError(f"Container {container_id} is not a challenge container")
 
             challenge_id = labels['dvc.challenge.id']
-            user_id = labels.get('dvc.challenge.user', 'unknown')
 
             logger.info(f"Stopping challenge {challenge_id} container {container_id}")
 

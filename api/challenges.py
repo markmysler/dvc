@@ -21,9 +21,8 @@ Security considerations:
 import logging
 import os
 import time
-from typing import Dict, Any, List
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import BadRequest
 
 from engine.orchestrator import ChallengeOrchestrator, ChallengeError, ChallengeNotFoundError
@@ -358,7 +357,6 @@ def stop_challenge(session_id: str):
 
         container_id = session_data['container_id']
         challenge_id = session_data['challenge_id']
-        user_id = session_data['user_id']
 
         # Stop container via orchestrator
         orchestrator = get_orchestrator()
@@ -374,11 +372,11 @@ def stop_challenge(session_id: str):
             status = 'success'
             status_code = 200
         elif session_cleaned:
-            message = f"Session cleaned up (container may have already been removed)"
+            message = "Session cleaned up (container may have already been removed)"
             status = 'success'
             status_code = 200
         else:
-            message = f"Failed to stop challenge"
+            message = "Failed to stop challenge"
             status = 'error'
             status_code = 500
 

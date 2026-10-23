@@ -9,7 +9,7 @@ Eliminates duplicate config.json files and provides single source of truth.
 import json
 import os
 import logging
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from pathlib import Path
 from datetime import datetime
 
@@ -44,7 +44,9 @@ class ConfigManager:
         """
         self.master_config_path = Path(master_config_path)
         self.challenges_base_path = Path(challenges_base_path)
-        self.imported_config_path = Path('/app/data/imported/imported_challenges.json')
+        self.imported_config_path = (
+            Path(os.environ.get('IMPORTED_CHALLENGES_DIR', '/app/data/imported')) / 'imported_challenges.json'
+        )
 
         # Configuration cache
         self._config_cache: Dict[str, Dict] = {}

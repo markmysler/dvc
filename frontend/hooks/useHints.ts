@@ -296,7 +296,7 @@ export function useRequestHint() {
         queryKey: hintKeys.sessions(variables.challenge_id, variables.session_id),
       });
 
-      console.log('Hint request successful:', data.message);
+      console.log('Hint request successful:', data.request_result.message);
     },
   });
 }

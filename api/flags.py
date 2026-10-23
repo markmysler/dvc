@@ -3,9 +3,8 @@ Flag validation endpoint for CTF challenge engine.
 Provides secure flag submission and validation against active sessions.
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import BadRequest, NotFound
-from typing import Dict, Any
 import logging
 import threading
 
