@@ -437,14 +437,6 @@ with open('/app/flag.txt', 'w') as f:
 
 ## Examples
 
-### Web XSS Challenge
-
-See `challenges/web-basic-xss/` for a complete example of:
-- Reflected XSS vulnerability
-- Progressive hints
-- Clear learning objectives
-- Proper flag handling
-
 ### Path Traversal Challenge
 
 See `challenges/path-traversal-challenge/` for:
@@ -496,7 +488,7 @@ python scripts/validate-challenge.py config.json --json | jq .errors
 
 ## Resources
 
-- **Challenge Template**: `/challenges/web-basic-xss/`
+- **Challenge Template**: `challenges/path-traversal-challenge/`
 - **Validation Script**: `/scripts/validate-challenge.py`
 - **Import API**: `POST /api/import/challenge`
 - **Security Profiles**: `/security/container-profiles.json`
