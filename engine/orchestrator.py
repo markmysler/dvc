@@ -234,9 +234,11 @@ class ChallengeOrchestrator:
             # Environment variables from challenge
             'environment': container_spec.get('environment', {}),
 
-            # Port mappings from challenge (map to random host ports)
+            # Port mappings from challenge: random host port, bound to the same
+            # address as the platform (localhost by default) so vulnerable apps
+            # are not reachable from the network
             'ports': {
-                f"{container_port}/tcp": None  # None means Docker will assign random port
+                f"{container_port}/tcp": (os.getenv('DVC_BIND_ADDRESS', '127.0.0.1'), None)
                 for container_port in container_spec.get('ports', {}).keys()
             },
         }

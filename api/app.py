@@ -248,10 +248,12 @@ import time
 app = create_app()
 
 if __name__ == '__main__':
-    # Development server
+    # Local development only; the container runs gunicorn (see Dockerfile).
+    # The Werkzeug debugger allows code execution, so it is opt-in and never
+    # enabled in the image, which holds the Docker socket.
     app.run(
-        host='0.0.0.0',
+        host='127.0.0.1',
         port=5000,
-        debug=True,
+        debug=os.getenv('FLASK_DEBUG') == '1',
         threaded=True
     )
