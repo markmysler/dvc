@@ -20,7 +20,7 @@ Features:
 import json
 import time
 import logging
-from typing import Dict, Optional, Any
+from typing import Any, Callable, Dict, Optional
 from dataclasses import dataclass
 
 # Configure logging
@@ -67,14 +67,20 @@ class HintService:
     providing adaptive learning assistance while preserving challenge difficulty.
     """
 
-    def __init__(self, challenges_config_path: str = "challenges/definitions/challenges.json"):
+    def __init__(self,
+                 challenges_config_path: str = "challenges/definitions/challenges.json",
+                 challenge_lookup: Optional[Callable[[str], Dict[str, Any]]] = None):
         """
         Initialize hint service.
 
         Args:
             challenges_config_path: Path to challenges configuration file
+            challenge_lookup: Function returning a challenge definition by ID.
+                The API passes the orchestrator's lookup so hints come from the
+                same definitions as everything else (including imports).
         """
         self.challenges_config_path = challenges_config_path
+        self._challenge_lookup = challenge_lookup
         self._challenge_cache: Dict[str, Dict] = {}
         self._last_cache_update = 0
         self.cache_ttl = 300  # 5 minutes cache TTL
@@ -134,6 +140,12 @@ class HintService:
         Raises:
             ChallengeNotFoundError: If challenge is not found
         """
+        if self._challenge_lookup is not None:
+            try:
+                return self._challenge_lookup(challenge_id)
+            except Exception:
+                raise ChallengeNotFoundError(f"Challenge not found: {challenge_id}")
+
         challenges = self._load_challenges_config()
 
         challenge_config = challenges.get(challenge_id)
@@ -217,7 +229,7 @@ class HintService:
             # Build available hints list
             available_hints = []
             for i in range(available_count):
-                hint_unlock_time = session_start + (i * HINT_UNLOCK_INTERVAL)
+                hint_unlock_time = session_start + ((i + 1) * HINT_UNLOCK_INTERVAL)
                 unlocked_by = 'time' if i < time_unlocked_count else 'request'
 
                 hint_info = HintInfo(
@@ -236,7 +248,7 @@ class HintService:
             # Calculate next unlock time
             next_unlock = None
             if available_count < len(hints):
-                next_unlock = session_start + (available_count * HINT_UNLOCK_INTERVAL)
+                next_unlock = session_start + ((available_count + 1) * HINT_UNLOCK_INTERVAL)
 
             result = {
                 'available_hints': available_hints,
@@ -344,7 +356,7 @@ class HintService:
             # Calculate next unlock timing
             next_unlock_in_seconds = None
             if available_count < len(hints):
-                next_hint_unlock_time = session_start + (available_count * HINT_UNLOCK_INTERVAL)
+                next_hint_unlock_time = session_start + ((available_count + 1) * HINT_UNLOCK_INTERVAL)
                 next_unlock_in_seconds = max(0, int(next_hint_unlock_time - current_time))
 
             status = {

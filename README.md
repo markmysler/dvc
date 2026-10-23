@@ -78,8 +78,9 @@ Per challenge session:
 | DELETE | `/api/challenges/<session_id>` | Stop a challenge |
 | POST | `/api/flags` | Submit a flag (`flag`, `session_id`) |
 | POST | `/api/flags/batch` | Submit several flags |
-| GET | `/api/hints/<challenge_id>` | Hints unlocked so far for a session |
-| POST | `/api/hints/<challenge_id>/request` | Unlock the next hint early |
+| GET | `/api/hints?challenge_id=&session_id=` | Hints unlocked so far in a running session |
+| POST | `/api/hints` | Unlock the next hint early (`challenge_id`, `session_id`, `action: "request"`) |
+| GET | `/api/hints/status?challenge_id=&session_id=` | Hint progress and time to the next unlock |
 | POST | `/api/import/` | Import a challenge (JSON or ZIP, needs `X-DVC-Request: 1`) |
 | DELETE | `/api/import/<challenge_id>` | Remove an imported challenge |
 

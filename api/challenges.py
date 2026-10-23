@@ -91,7 +91,8 @@ def list_challenges():
                 'points': challenge_data.get('points', 0),
                 'estimated_time': metadata.get('estimated_time', '30 minutes'),
                 'imported': challenge_data.get('imported', False),
-                'hints': metadata.get('hints', []),
+                # Hint text is served per session by /api/hints, not in the catalogue
+                'hint_count': len(metadata.get('hints', [])),
                 'learning_objectives': metadata.get('learning_objectives', []),
                 'author': metadata.get('author', 'Unknown'),
                 'version': metadata.get('version', '1.0')

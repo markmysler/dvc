@@ -25,7 +25,7 @@ export interface Challenge {
   };
   flag_format?: string;
   learning_objectives?: string[];
-  hints?: string[];
+  hint_count?: number; // hint text comes from /api/hints once a session is running
 }
 
 // Challenge session tracking

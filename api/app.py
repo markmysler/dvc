@@ -208,19 +208,23 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
             'endpoints': {
                 'challenges': '/api/challenges',
                 'flags': '/api/flags',
+                'hints': '/api/hints',
+                'import': '/api/import',
                 'health': '/api/health'
             },
-            'documentation': 'https://github.com/your-org/dvc'
+            'documentation': 'https://github.com/markmysler/dvc'
         })
 
     # Register blueprints
     import challenges
     import flags
     import import_handler
+    import hints
 
     app.register_blueprint(challenges.bp)
     app.register_blueprint(flags.flags_bp)
     app.register_blueprint(import_handler.bp)
+    app.register_blueprint(hints.bp)
 
     # Container lifecycle: ending a session (expiry, solve, stop) also stops
     # its container, and a reaper removes expired challenge containers that

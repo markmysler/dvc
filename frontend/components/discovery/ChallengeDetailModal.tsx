@@ -33,6 +33,7 @@ import {
   useRunningChallenges,
 } from '@/hooks/useChallenges';
 import { useProgress } from '@/hooks/useProgress';
+import { HintPanel } from '@/components/challenge/hint-panel';
 import {
   type Challenge,
   type ChallengeSession,
@@ -80,7 +81,6 @@ export function ChallengeDetailModal({
 
   // Local state
   const [flagInput, setFlagInput] = useState('');
-  const [showHints, setShowHints] = useState(false);
 
   // Find active session for this challenge
   const activeSession = useMemo(() => {
@@ -94,7 +94,6 @@ export function ChallengeDetailModal({
   useEffect(() => {
     if (!isOpen) {
       setFlagInput('');
-      setShowHints(false);
     }
   }, [isOpen]);
 
@@ -440,39 +439,26 @@ export function ChallengeDetailModal({
             </Card>
           </div>
 
-          {/* Hints */}
-          {challenge.hints && challenge.hints.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+          {/* Hints: unlocked progressively for a running session (see /api/hints) */}
+          {(challenge.hint_count ?? 0) > 0 && (
+            activeSession?.session_id ? (
+              <HintPanel challengeId={challenge.id} sessionId={activeSession.session_id} />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
                     <Lightbulb className="h-5 w-5" />
-                    Hints ({challenge.hints.length})
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowHints(!showHints)}
-                  >
-                    {showHints ? 'Hide' : 'Show'} Hints
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              {showHints && (
+                    Hints ({challenge.hint_count})
+                  </CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {challenge.hints.map((hint, index) => (
-                      <Alert key={index}>
-                        <Lightbulb className="h-4 w-4" />
-                        <AlertDescription>
-                          <strong>Hint {index + 1}:</strong> {hint}
-                        </AlertDescription>
-                      </Alert>
-                    ))}
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Start the challenge to unlock hints. One unlocks every 5 minutes,
+                    or you can reveal the next one early.
+                  </p>
                 </CardContent>
-              )}
-            </Card>
+              </Card>
+            )
           )}
 
           {/* Container Info */}

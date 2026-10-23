@@ -252,3 +252,57 @@ def test_api_refuses_to_start_without_flag_key(api, monkeypatch):
     monkeypatch.delenv("FLAG_SECRET_KEY")
     with pytest.raises(RuntimeError, match="FLAG_SECRET_KEY"):
         app_module.create_app({"TESTING": True})
+
+
+# ── Hints ─────────────────────────────────────────────────────────────────
+
+def hints(api, session_id, challenge_id=CHALLENGE):
+    return api.get(f"/api/hints?challenge_id={challenge_id}&session_id={session_id}")
+
+
+def test_catalogue_does_not_reveal_hint_text(api):
+    challenge = api.get("/api/challenges").get_json()["challenges"][0]
+    assert "hints" not in challenge
+    assert challenge["hint_count"] == 3
+
+
+def test_hints_start_locked_and_unlock_over_time(api):
+    session_id = spawn(api).get_json()["session_id"]
+    data = hints(api, session_id).get_json()["data"]
+    assert data["available_hints"] == []
+    assert data["total_hints"] == 3
+    assert data["status"]["next_unlock_in_seconds"] > 0
+
+    # 11 minutes later two hints have unlocked by time
+    api.session_manager._sessions[session_id].created_at -= 11 * 60
+    data = hints(api, session_id).get_json()["data"]
+    assert [h["index"] for h in data["available_hints"]] == [0, 1]
+    assert {h["unlocked_by"] for h in data["available_hints"]} == {"time"}
+
+
+def test_request_unlocks_one_hint_at_a_time(api):
+    session_id = spawn(api).get_json()["session_id"]
+    body = {"challenge_id": CHALLENGE, "session_id": session_id, "action": "request"}
+
+    for expected in (1, 2, 3):
+        response = api.post("/api/hints", json=body)
+        assert response.status_code == 200
+        data = response.get_json()["data"]
+        assert len(data["available_hints"]) == expected
+        assert data["request_result"]["message"]
+
+    assert api.post("/api/hints", json=body).status_code == 409  # all unlocked
+
+
+def test_hints_require_a_session_for_that_challenge(api):
+    session_id = spawn(api).get_json()["session_id"]
+    assert hints(api, "unknown").status_code == 404
+    assert hints(api, session_id, challenge_id="other-challenge").status_code == 404
+    assert api.get("/api/hints").status_code == 400
+
+
+def test_hint_status_endpoint(api):
+    session_id = spawn(api).get_json()["session_id"]
+    status = api.get(f"/api/hints/status?challenge_id={CHALLENGE}&session_id={session_id}").get_json()["data"]
+    assert status["total_hints"] == 3
+    assert status["available_count"] == 0

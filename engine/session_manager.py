@@ -53,6 +53,7 @@ class SessionInfo:
     instance_data: Optional[str] = None  # Unique instance data for flag generation
     status: str = "active"  # active, expired, stopped
     health_status: str = "unknown"  # unknown, healthy, unhealthy, starting, none
+    hints_requested: int = 0  # hints unlocked early on request (see hint_service)
 
 
 class SessionManagerError(Exception):
@@ -234,6 +235,15 @@ class SessionManager:
                 return None
 
             return asdict(session_info)
+
+    def set_hints_requested(self, session_id: str, count: int) -> bool:
+        """Record how many hints the session has unlocked by request"""
+        with self._lock:
+            session_info = self._sessions.get(session_id)
+            if not session_info:
+                return False
+            session_info.hints_requested = max(session_info.hints_requested, count)
+            return True
 
     def has_capacity(self, user_id: str) -> bool:
         """Whether the user can start another session (check before spawning)"""
