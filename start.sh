@@ -66,7 +66,8 @@ Description:
     This script will:
     1. Validate Docker and Docker Compose are installed
     2. Perform first-time setup (if needed)
-    3. Start the platform containers
+    3. Generate a random FLAG_SECRET_KEY in .env (if missing)
+    4. Start the platform containers and wait for them to be healthy
 
     By default, only the API and frontend containers are started for a 
     lightweight development experience. Use --monitor to enable the full 
@@ -76,9 +77,10 @@ Environment Setup:
     On first run, the script will:
     - Validate all dependencies are installed
     - Create required directories
-    - Build challenge Docker images
-    - Initialize the database
-    - Set up monitoring (if --monitor is used)
+    Challenge images are built on demand the first time each one is started.
+
+    All ports are bound to 127.0.0.1. Set DVC_BIND_ADDRESS (and HOST) to
+    expose the platform on another interface, e.g. a lab VM.
 
 EOF
     exit 0
@@ -229,9 +231,9 @@ start_platform() {
         
         print_success "All services started!"
         print_info "Access points:"
-        print_info "  - Frontend:   http://${HOST:-localhost}:3000"
+        print_info "  - Frontend:   http://${HOST:-localhost}:3001"
         print_info "  - API:        http://${HOST:-localhost}:5000"
-        print_info "  - Grafana:    http://${HOST:-localhost}:3001"
+        print_info "  - Grafana:    http://${HOST:-localhost}:3000"
         print_info "  - Prometheus: http://${HOST:-localhost}:9090"
     else
         print_info "Starting in LITE mode (API + Frontend only)..."
@@ -241,7 +243,7 @@ start_platform() {
         
         print_success "Core services started!"
         print_info "Access points:"
-        print_info "  - Frontend: http://${HOST:-localhost}:3000"
+        print_info "  - Frontend: http://${HOST:-localhost}:3001"
         print_info "  - API:      http://${HOST:-localhost}:5000"
         print_info ""
         print_info "💡 Tip: Use './start.sh --monitor' to enable Grafana and Prometheus"
@@ -331,7 +333,7 @@ check_health() {
             print_warning "Prometheus health check failed (may still be starting up)"
         fi
         
-        if curl -s -f http://${HOST:-localhost}:3001/api/health >/dev/null 2>&1; then
+        if curl -s -f http://${HOST:-localhost}:3000/api/health >/dev/null 2>&1; then
             print_success "Grafana is healthy"
         else
             print_warning "Grafana health check failed (may still be starting up)"
