@@ -191,6 +191,32 @@ first_time_setup() {
     print_success "First-time setup complete!"
 }
 
+# Make sure .env holds a random flag secret key (generation and validation share it)
+ensure_secret_key() {
+    if [ -f .env ] && grep -qE '^FLAG_SECRET_KEY=.{32,}' .env; then
+        print_success "Flag secret key found in .env"
+        return
+    fi
+
+    local key
+    if command_exists openssl; then
+        key=$(openssl rand -hex 32)
+    elif command_exists python3; then
+        key=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+    else
+        print_error "Need openssl or python3 to generate FLAG_SECRET_KEY"
+        exit 1
+    fi
+
+    # Replace a short/placeholder key if present, otherwise append
+    if [ -f .env ] && grep -q '^FLAG_SECRET_KEY=' .env; then
+        sed -i.bak '/^FLAG_SECRET_KEY=/d' .env && rm -f .env.bak
+    fi
+    echo "FLAG_SECRET_KEY=$key" >> .env
+    chmod 600 .env 2>/dev/null || true
+    print_success "Generated a random FLAG_SECRET_KEY in .env"
+}
+
 # Start the platform
 start_platform() {
     print_header "Starting DVC Platform"
@@ -357,10 +383,13 @@ EOF
         print_info "Delete '$SETUP_MARKER' to re-run setup"
     fi
     
-    # Step 3: Start the platform
+    # Step 3: Make sure a flag secret key exists
+    ensure_secret_key
+
+    # Step 4: Start the platform
     start_platform
     
-    # Step 4: Health check
+    # Step 5: Health check
     if ! check_health; then
         print_error "Health check failed!"
         print_info "Platform started but some services are not healthy"
@@ -368,7 +397,7 @@ EOF
         exit 1
     fi
     
-    # Step 5: Show running containers
+    # Step 6: Show running containers
     show_containers
     
     # Final message

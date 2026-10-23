@@ -395,7 +395,7 @@ Set these in `docker-compose.yml` or `.env`:
 ```bash
 # API Configuration
 FLASK_ENV=development            # development or production
-SECRET_KEY=your-secret-key       # For HMAC flag generation
+FLAG_SECRET_KEY=<random 64 hex>  # HMAC key for flags; ./start.sh generates it (required)
 DOCKER_HOST=unix:///var/run/docker.sock
 
 # Frontend Configuration

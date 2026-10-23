@@ -319,3 +319,32 @@ class TestTamperResistance:
             for i in range(10):
                 secret = f"secret-{i}"
                 assert secret not in flag, f"Secret key should not be visible in flag: {flag}"
+
+class TestSecretKeyConfiguration:
+    """The flag key must come from FLAG_SECRET_KEY and must never fall back to a default."""
+
+    def test_missing_key_is_rejected(self, monkeypatch):
+        from engine.flag_system import get_flag_secret_key
+        monkeypatch.delenv("FLAG_SECRET_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="not set"):
+            get_flag_secret_key()
+
+    def test_placeholder_key_is_rejected(self, monkeypatch):
+        from engine.flag_system import get_flag_secret_key
+        monkeypatch.setenv("FLAG_SECRET_KEY", "default-secret-key-change-in-production")
+        with pytest.raises(RuntimeError, match="placeholder"):
+            get_flag_secret_key()
+
+    def test_short_key_is_rejected(self, monkeypatch):
+        from engine.flag_system import get_flag_secret_key
+        monkeypatch.setenv("FLAG_SECRET_KEY", "too-short")
+        with pytest.raises(RuntimeError, match="at least"):
+            get_flag_secret_key()
+
+    def test_valid_key_round_trips(self, monkeypatch):
+        from engine.flag_system import get_flag_secret_key
+        key = "a" * 64
+        monkeypatch.setenv("FLAG_SECRET_KEY", f"  {key}  ")
+        assert get_flag_secret_key() == key
+        flag = generate_unique_flag("chal", "user", "timestamp:1,nonce:x", get_flag_secret_key())
+        assert validate_flag(flag, "chal", "user", "timestamp:1,nonce:x", get_flag_secret_key())

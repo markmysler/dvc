@@ -14,7 +14,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from engine.session_manager import get_session_manager
-from engine.flag_system import validate_flag
+from engine.flag_system import validate_flag, get_flag_secret_key
 
 # Create blueprint
 flags_bp = Blueprint('flags', __name__)
@@ -75,16 +75,13 @@ def validate_submitted_flag():
         user_id = session['user_id']
         instance_data = session['instance_data']
 
-        # Get secret key from config (in production, use environment variable)
-        secret_key = current_app.config.get('FLAG_SECRET_KEY', 'default-secret-key-change-in-production')
-
-        # Validate the flag
+        # Validate the flag with the same key the orchestrator used to generate it
         is_valid = validate_flag(
             submitted_flag,
             challenge_id,
             user_id,
             instance_data,
-            secret_key
+            get_flag_secret_key()
         )
 
         # Prepare response
@@ -194,6 +191,8 @@ def validate_multiple_flags():
             raise BadRequest("'submissions' must be an array")
 
         results = []
+        session_manager = get_session_manager()
+        secret_key = get_flag_secret_key()
 
         for i, submission in enumerate(submissions):
             try:
@@ -218,7 +217,7 @@ def validate_multiple_flags():
                     continue
 
                 # Get session
-                session = session_manager.get_session(session_id)
+                session = session_manager.get_session_by_id(session_id)
                 if not session:
                     results.append({
                         "index": i,
@@ -232,7 +231,6 @@ def validate_multiple_flags():
                 challenge_id = session['challenge_id']
                 user_id = session['user_id']
                 instance_data = session['instance_data']
-                secret_key = current_app.config.get('FLAG_SECRET_KEY', 'default-secret-key')
 
                 is_valid = validate_flag(flag, challenge_id, user_id, instance_data, secret_key)
 

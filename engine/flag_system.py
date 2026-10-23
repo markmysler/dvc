@@ -19,6 +19,7 @@ Security features:
 
 import hmac
 import hashlib
+import os
 import re
 
 # Constants for flag system configuration
@@ -29,6 +30,45 @@ ENCODING = 'utf-8'
 
 # Compiled regex for flag format validation (optimization)
 FLAG_PATTERN = re.compile(r'^flag\{[0-9a-f]{16}\}$')
+
+# Secret key configuration
+FLAG_SECRET_KEY_ENV = "FLAG_SECRET_KEY"
+MIN_SECRET_KEY_LENGTH = 32
+# Placeholder values that shipped in earlier versions; anyone could forge flags with them
+INSECURE_SECRET_KEYS = frozenset({
+    "default-secret-key-change-in-production",
+    "default-secret-key",
+    "your-secret-key",
+    "your-secret-key-here",
+    "changeme",
+})
+
+
+def get_flag_secret_key() -> str:
+    """
+    Return the HMAC secret key used for both flag generation and validation.
+
+    Generation (orchestrator) and validation (API) must use the same key, so
+    both read it through this function from the FLAG_SECRET_KEY environment
+    variable. There is deliberately no fallback: a default key would let
+    players forge flags.
+
+    Raises:
+        RuntimeError: If the key is missing, a known placeholder, or too short
+    """
+    key = os.environ.get(FLAG_SECRET_KEY_ENV, "").strip()
+    if not key:
+        raise RuntimeError(
+            f"{FLAG_SECRET_KEY_ENV} is not set. Run ./start.sh (it generates one in .env) "
+            f"or set it to a random value, e.g. `openssl rand -hex 32`."
+        )
+    if key in INSECURE_SECRET_KEYS:
+        raise RuntimeError(f"{FLAG_SECRET_KEY_ENV} is set to a known placeholder value; use a random key.")
+    if len(key) < MIN_SECRET_KEY_LENGTH:
+        raise RuntimeError(
+            f"{FLAG_SECRET_KEY_ENV} must be at least {MIN_SECRET_KEY_LENGTH} characters long."
+        )
+    return key
 
 
 class FlagGenerator:

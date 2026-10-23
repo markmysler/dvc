@@ -67,6 +67,11 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     if config:
         app.config.update(config)
 
+    # Fail fast without a real flag key: generation and validation must share it,
+    # and a default key would let players forge flags
+    from engine.flag_system import get_flag_secret_key
+    get_flag_secret_key()
+
     # Configure CORS for frontend integration
     host = os.getenv('HOST', 'localhost')
     CORS(app, origins=[

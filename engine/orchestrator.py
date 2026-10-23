@@ -20,7 +20,7 @@ from docker.client import DockerClient
 from docker.models.containers import Container
 from docker.errors import DockerException, APIError, ImageNotFound
 
-from .flag_system import generate_unique_flag
+from .flag_system import generate_unique_flag, get_flag_secret_key
 from .health_monitor import HealthMonitor
 from .config_manager import ConfigManager
 
@@ -264,8 +264,8 @@ class ChallengeOrchestrator:
         return str(uuid.uuid4())[:8]
 
     def _get_flag_secret_key(self) -> str:
-        """Get secret key for flag generation from environment or default"""
-        return os.getenv('FLAG_SECRET_KEY', 'default-secret-key-change-in-production')
+        """Get secret key for flag generation (shared with the validator)"""
+        return get_flag_secret_key()
 
     def spawn_challenge(self,
                        challenge_id: str,
@@ -659,68 +659,6 @@ class ChallengeOrchestrator:
         except Exception as e:
             logger.error(f"Error during orchestrator shutdown: {e}")
 
-    def validate_flag(self, challenge_id: str, user_id: str, submitted_flag: str) -> bool:
-        """
-        Validate a submitted flag for a challenge session.
-
-        Args:
-            challenge_id: Challenge identifier
-            user_id: User identifier
-            submitted_flag: Flag submitted by user
-
-        Returns:
-            True if flag is valid, False otherwise
-        """
-        from .flag_system import validate_flag
-
-        try:
-            # Get running challenge container for this user/challenge
-            filters = {
-                'label': [
-                    f'dvc.challenge.id={challenge_id}',
-                    f'dvc.challenge.user={user_id}'
-                ]
-            }
-
-            containers = self.docker_client.containers.list(filters=filters, all=False)
-
-            if not containers:
-                logger.warning(f"No running challenge container found for {challenge_id}/{user_id}")
-                return False
-
-            # Use the most recent container if multiple exist
-            container = containers[0]
-            labels = container.attrs.get('Config', {}).get('Labels', {})
-
-            # Reconstruct instance data from container labels
-            session_id = labels.get('dvc.challenge.session')
-            started_time = labels.get('dvc.challenge.started')
-
-            if not session_id or not started_time:
-                logger.error(f"Missing session data in container labels")
-                return False
-
-            instance_data = f"timestamp:{started_time},nonce:{session_id}"
-
-            # Validate flag using same secret key
-            is_valid = validate_flag(
-                flag=submitted_flag,
-                challenge_id=challenge_id,
-                user_id=user_id,
-                instance_data=instance_data,
-                secret_key=self._get_flag_secret_key()
-            )
-
-            if is_valid:
-                logger.info(f"Valid flag submitted for {challenge_id} by {user_id}")
-            else:
-                logger.info(f"Invalid flag submitted for {challenge_id} by {user_id}")
-
-            return is_valid
-
-        except Exception as e:
-            logger.error(f"Error validating flag: {e}")
-            return False
 
 def main():
     """CLI interface for testing orchestrator"""

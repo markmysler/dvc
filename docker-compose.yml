@@ -18,6 +18,7 @@ services:
       - FLASK_ENV=development
       - DOCKER_HOST=unix:///var/run/docker.sock
       - HOST=${HOST:-localhost}
+      - FLAG_SECRET_KEY=${FLAG_SECRET_KEY:?FLAG_SECRET_KEY is not set - run ./start.sh to generate one in .env}
     networks:
       - monitoring
       - challenges
