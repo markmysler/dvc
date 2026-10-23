@@ -1,2 +1,2 @@
-docker==7.0.0
-psutil==5.9.8
+# The engine runs inside the API container; keep in sync with api/requirements.txt
+docker==7.1.0

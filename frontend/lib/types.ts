@@ -37,7 +37,7 @@ export interface ChallengeSession {
   access_url: string;
   status: 'starting' | 'running' | 'stopping' | 'stopped' | 'error';
   created_at: string;
-  expires_at: string;
+  expires_at: number; // Unix timestamp in seconds
   challenge: Challenge;
   ports?: Record<string, string>; // Container port mappings e.g., "80/tcp": "localhost:32768"
 }

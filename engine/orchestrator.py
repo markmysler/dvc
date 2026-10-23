@@ -347,7 +347,7 @@ class ChallengeOrchestrator:
 
     def _generate_session_id(self) -> str:
         """Generate unique session ID for container tracking"""
-        return str(uuid.uuid4())[:8]
+        return uuid.uuid4().hex
 
     def _get_flag_secret_key(self) -> str:
         """Get secret key for flag generation (shared with the validator)"""

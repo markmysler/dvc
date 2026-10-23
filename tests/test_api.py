@@ -123,7 +123,7 @@ def test_stop_removes_challenge_proxy_and_network(api):
     session_id = spawn(api).get_json()["session_id"]
     assert api.docker.containers.items and api.docker.networks.items
 
-    response = api.delete(f"/api/challenges/{session_id}")
+    response = api.delete(f"/api/challenges/{session_id}?user_id=alice")
     assert response.status_code == 200
     assert api.docker.containers.items == {}
     assert api.docker.networks.items == {}
@@ -306,3 +306,24 @@ def test_hint_status_endpoint(api):
     status = api.get(f"/api/hints/status?challenge_id={CHALLENGE}&session_id={session_id}").get_json()["data"]
     assert status["total_hints"] == 3
     assert status["available_count"] == 0
+
+
+# ── Monitoring ────────────────────────────────────────────────────────────
+
+def test_metrics_endpoint_exports_request_counters(api):
+    api.get("/api/challenges")
+    body = api.get("/metrics").get_data(as_text=True)
+    assert "flask_http_request_total" in body
+    assert "flask_http_request_duration_seconds" in body
+
+
+def test_only_the_owner_can_stop_a_session(api):
+    session_id = spawn(api, user="alice").get_json()["session_id"]
+    assert api.delete(f"/api/challenges/{session_id}").status_code == 403
+    assert api.delete(f"/api/challenges/{session_id}?user_id=mallory").status_code == 403
+    assert api.session_manager.get_session_by_id(session_id) is not None
+
+
+def test_session_ids_are_full_uuids(api):
+    session_id = spawn(api).get_json()["session_id"]
+    assert len(session_id) == 32

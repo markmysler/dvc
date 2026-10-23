@@ -356,6 +356,14 @@ def stop_challenge(session_id: str):
                 'code': 404
             }), 404
 
+        # Only the session's owner may stop it
+        if request.args.get('user_id') != session_data['user_id']:
+            return jsonify({
+                'status': 'error',
+                'error': 'Session belongs to a different user (pass ?user_id=)',
+                'code': 403
+            }), 403
+
         container_id = session_data['container_id']
         challenge_id = session_data['challenge_id']
 

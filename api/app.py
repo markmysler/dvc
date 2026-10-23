@@ -74,6 +74,12 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     from engine.flag_system import get_flag_secret_key
     get_flag_secret_key()
 
+    # Prometheus metrics at /metrics (flask_http_request_* used by the Grafana
+    # API dashboard). A registry per app keeps repeated create_app calls safe.
+    from prometheus_client import CollectorRegistry
+    from prometheus_flask_exporter import PrometheusMetrics
+    PrometheusMetrics(app, group_by='endpoint', registry=CollectorRegistry(auto_describe=True))
+
     # Configure CORS for frontend integration
     host = os.getenv('HOST', 'localhost')
     CORS(app, origins=[

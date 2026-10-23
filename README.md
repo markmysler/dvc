@@ -75,7 +75,7 @@ Per challenge session:
 | GET | `/api/challenges` | Challenge catalogue |
 | POST | `/api/challenges` | Start a challenge (`challenge_id`, `user_id`, optional `session_timeout` 60–7200 s) |
 | GET | `/api/challenges/running` | Running challenges |
-| DELETE | `/api/challenges/<session_id>` | Stop a challenge |
+| DELETE | `/api/challenges/<session_id>?user_id=` | Stop a challenge (owner only) |
 | POST | `/api/flags` | Submit a flag (`flag`, `session_id`) |
 | POST | `/api/flags/batch` | Submit several flags |
 | GET | `/api/hints?challenge_id=&session_id=` | Hints unlocked so far in a running session |
@@ -83,6 +83,7 @@ Per challenge session:
 | GET | `/api/hints/status?challenge_id=&session_id=` | Hint progress and time to the next unlock |
 | POST | `/api/import/` | Import a challenge (JSON or ZIP, needs `X-DVC-Request: 1`) |
 | DELETE | `/api/import/<challenge_id>` | Remove an imported challenge |
+| GET | `/metrics` | Prometheus metrics (request counts and latency) |
 
 ## Security model and known limitations
 

@@ -156,9 +156,12 @@ export async function spawnChallenge(
  * Stop a running challenge container
  */
 export async function stopChallenge(
-  sessionId: string
+  sessionId: string,
+  userId: string = 'default-user'
 ): Promise<StopChallengeResponse> {
-  return apiRequest<StopChallengeResponse>(`/api/challenges/${sessionId}`, {
+  // The API only stops sessions owned by the given user
+  const params = new URLSearchParams({ user_id: userId });
+  return apiRequest<StopChallengeResponse>(`/api/challenges/${sessionId}?${params.toString()}`, {
     method: 'DELETE',
   });
 }

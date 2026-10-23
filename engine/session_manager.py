@@ -445,7 +445,7 @@ class SessionManager:
 
     def _generate_session_id(self) -> str:
         """Generate unique session identifier"""
-        return str(uuid.uuid4())[:8]
+        return uuid.uuid4().hex  # 128 bits: session IDs act as capabilities
 
     def validate_sessions_against_containers(self, orchestrator) -> int:
         """

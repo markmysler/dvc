@@ -265,7 +265,7 @@ export function ChallengeDetailModal({
                       </div>
 
                       <p className="text-xs text-muted-foreground">
-                        Expires: {activeSession.expires_at ? new Date(activeSession.expires_at).toLocaleString() : 'Unknown'}
+                        Expires: {activeSession.expires_at ? new Date(activeSession.expires_at * 1000).toLocaleString() : 'Unknown'}
                       </p>
                     </div>
                   )}
